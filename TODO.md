@@ -43,4 +43,8 @@ Describe the concept for automatic tests and exploratory tests done by you for t
 > Validation: Ran `npm run build`, ran `npm test`, started the local Vite server, and smoke-tested the rendered UI in a browser. Live GitHub commit flows were not executed because there is no repository token in the environment.
 > Learning: A dedicated `todo-test` repository or at least a dedicated test branch is not required for local validation, but it is strongly recommended for safe end-to-end verification of create, edit, move, delete, and conflict flows.
 
-## Give instructions how to publish it to Google Play store
+## [DONE 2026-04-18.1] Give instructions how to publish it to Google Play store
+
+> Agent: Added Google Play publishing instructions to `README.md`, including Capacitor packaging steps, Android Studio signing, Play Console submission flow, and the current release-readiness checks.
+> Changes: Documented the concrete commands to wrap the app for Android and called out the key blocker for a public store release: moving GitHub token handling out of browser storage.
+> Validation: Reviewed the publishing path against the current project shape and documented the safest recommendation: use the app locally or for internal Android testing first, then harden auth before public release.
