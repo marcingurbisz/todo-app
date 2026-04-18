@@ -13,7 +13,11 @@ Requirements:
 
 # TODO
 
-## [IN PROGRESS 2026-04-18.1] Init, commit and push todo-app to just created by me empty https://github.com/marcingurbisz/todo-app
+## [DONE 2026-04-18.1] Init, commit and push todo-app to just created by me empty https://github.com/marcingurbisz/todo-app
+
+> Agent: The `todo-app` directory was initialized as a standalone git repository on `main`, `origin` was set to `https://github.com/marcingurbisz/todo-app.git`, and the initial commit was pushed successfully.
+> Changes: Added the first repo commit with the TODO ledger and connected the repo to GitHub.
+> Validation: Verified local repo creation, commit creation, branch tracking, and a successful push to `origin/main`.
 
 ## Prepare README.md and planned architecture base on "Initial idea"
 ... in [todo-app](../../todo-app) dir.
