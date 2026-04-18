@@ -19,8 +19,12 @@ Requirements:
 > Changes: Added the first repo commit with the TODO ledger and connected the repo to GitHub.
 > Validation: Verified local repo creation, commit creation, branch tracking, and a successful push to `origin/main`.
 
-## Prepare README.md and planned architecture base on "Initial idea"
+## [DONE 2026-04-18.1] Prepare README.md and planned architecture base on "Initial idea"
 ... in [todo-app](../../todo-app) dir.
+
+> Agent: Added `README.md` with the MVP scope, mobile-first architecture, GitHub sync strategy, concurrency approach, and planned project structure.
+> Changes: Documented a React + TypeScript + Vite client packaged later with Capacitor and using the GitHub Git Data API for immediate commits.
+> Validation: Checked the repository state after adding the README and aligned the documented design with every requirement from the initial idea.
 
 ## Implement
 
