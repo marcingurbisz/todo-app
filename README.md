@@ -95,3 +95,54 @@ todo-app/
 - Local development will use `npm`, Vite, and the browser.
 - Android packaging is planned via Capacitor after the web app flow is verified.
 - Automatic tests should cover repository tree transforms and GitHub API request shaping. Manual exploratory testing should cover real sync behavior with a test repository.
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Production build and current unit tests:
+
+```bash
+npm run build
+npm test
+```
+
+## Verification strategy
+
+What can be verified in the current devcontainer without extra secrets:
+
+- TypeScript compilation and production bundling.
+- Unit tests for path normalization and repository tree shaping.
+- Browser smoke testing of the responsive UI shell, editor flow, and settings flow.
+
+What still needs a real GitHub-backed test run:
+
+- reading the private repository with a real token
+- committing file edits to GitHub
+- moving files across directories and checking resulting commits
+- delete flows against a disposable repository state
+- concurrency rejection when the branch head moves between load and publish
+
+Recommended test setup for safe end-to-end verification:
+
+- a dedicated `todo-test` repository or a dedicated test branch in the private `todo` repository
+- a fine-grained token with contents access limited to that test target
+- a small fixture tree with nested directories and markdown files
+
+Automatic test concepts for the next phase:
+
+- unit tests for commit payload generation for create, edit, move, and delete actions
+- integration tests with mocked GitHub API responses for load, read, publish success, and publish conflict paths
+- UI tests for file selection, unsaved changes prompts, and settings persistence
+
+Exploratory test checklist:
+
+- load the repo and verify file counts and folder nesting
+- open several files and confirm editor content matches GitHub contents
+- edit and save a file, then confirm the commit appears in GitHub
+- move a file to a new path and confirm the old path disappears
+- delete a file and confirm the tree refreshes correctly
+- create a concurrent change from another machine, then verify the app rejects the stale publish and requires refresh

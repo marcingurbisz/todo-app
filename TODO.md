@@ -32,10 +32,15 @@ Requirements:
 > Changes: Added the Vite project scaffold, repository settings storage, GitHub API client, file tree utilities, responsive UI, and initial unit tests for tree/path behavior.
 > Validation: Installed dependencies, ran `npm run build`, and ran `npm test` successfully after fixing the first-pass tree builder bug.
 
-## Think about verification
+## [DONE 2026-04-18.1] Think about verification
 How can you test what you've just implemented? Do you have all that you need or I need to install something for you to the devcontainer that you are using?
 Do you need github todo-test repo or it is not needed?
 If you have everything you need do the tests or at least try to test/verify what you can.
 Describe the concept for automatic tests and exploratory tests done by you for this project.
+
+> Agent: The current devcontainer already had everything needed for local build, test, and browser smoke testing. No extra packages were required.
+> Changes: Tightened the build so it no longer emits tracked TypeScript artifacts, added verification guidance to `README.md`, and documented the recommended end-to-end test setup.
+> Validation: Ran `npm run build`, ran `npm test`, started the local Vite server, and smoke-tested the rendered UI in a browser. Live GitHub commit flows were not executed because there is no repository token in the environment.
+> Learning: A dedicated `todo-test` repository or at least a dedicated test branch is not required for local validation, but it is strongly recommended for safe end-to-end verification of create, edit, move, delete, and conflict flows.
 
 ## Give instructions how to publish it to Google Play store
