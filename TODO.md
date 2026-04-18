@@ -1,6 +1,6 @@
 # Initial idea
 
-I miss the TODO app that gives me the good access to my todos on my android. My todos are stored as files in [todo](..) dir which is also private github repo.
+I miss the TODO app that gives me the good access to my todos on my android. My todos are stored as files in [todo](../todo/) dir which is also private github repo.
 
 Requirements:
 * I see the all todo files and dirs
