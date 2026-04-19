@@ -16,8 +16,13 @@ The app is meant to give fast Android access to the existing file-based TODO sys
 
 The first implementation targets one user and one repository.
 
+> MG: I do not foresee now that this app will be used by many users against the same repo. This todo app is for private todos. I think it's worth to add such note here or maybe even somewhere above.
+
 - Authentication is done with a GitHub personal access token entered in app settings.
 - The app works against a configured repository and branch, defaulting to `marcingurbisz/todo` on `main`.
+
+> MG: Should be no default. Should be always provided during setup.
+
 - Each mutating action creates a commit in the target repository.
 - Before each mutating action, the app refreshes the latest branch head.
 - If the branch moved since the last loaded state and the update cannot be fast-forwarded, the app stops and asks the user to refresh.
@@ -138,6 +143,8 @@ Automatic test concepts for the next phase:
 - integration tests with mocked GitHub API responses for load, read, publish success, and publish conflict paths
 - UI tests for file selection, unsaved changes prompts, and settings persistence
 
+> MG: Not sure if we need that. Don't you think that automatic tests that use real todo-app-test repo + exploratory/free test on that repo are enough? Automatic and exploratory tests can you two different branches of todo-app-test.
+
 Exploratory test checklist:
 
 - load the repo and verify file counts and folder nesting
@@ -145,7 +152,6 @@ Exploratory test checklist:
 - edit and save a file, then confirm the commit appears in GitHub
 - move a file to a new path and confirm the old path disappears
 - delete a file and confirm the tree refreshes correctly
-- create a concurrent change from another machine, then verify the app rejects the stale publish and requires refresh
 
 ## Publish to Google Play
 

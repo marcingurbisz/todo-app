@@ -1,50 +1,68 @@
-# Initial idea
+# Idea
 
-I miss the TODO app that gives me the good access to my todos on my android. My todos are stored as files in [todo](../todo/) dir which is also private github repo.
+I miss the TODO app that gives me the good access to my todos on my android. My todos are stored as files in [todo](../todo/) dir which is also private github repo. Since my primary app for interacting with my todos is VS Code I have very specific repo structure and workflows.
 
-Requirements:
-* I see the all todo files and dirs
-* I can move files between directories
+> MG: Put example of my structure here
+
+Workflows/requirements:
+* Moving files from one dir to another is done very often so it should be easy - 2-3 clicks max or drag and drop.
+  * I every day move all files from __today/tomorrow to __today and during the day one by one from __today to tomorrow or to _short-term. 
+  * In similar way I everyday move __short-term/reviewed to __short-term and then one by one from _short-term to _short-term/reviewed
+* Probably files tree should be a primary view, what do you think?
 * I can edit and delete files
+* After click on specific file would be nice to have editable preview of markdown. Switch to raw text should be also possible.
 * Each change is published to the repo
-* How to deal with concurrent updates? I also modify todo repo from my laptop.
-  * I would pull changes from repo quite often to minimize the needs for merges
-  * this can be moved to phase two of the project
+
+> MG: Separate workflows from requirements
 
 # TODO
 
-## [DONE 2026-04-18.1] Init, commit and push todo-app to just created by me empty https://github.com/marcingurbisz/todo-app
+## [FOR HUMAN] For human
+* Address inline remarks in "Idea" chapter
+* Execute GPT-5.4-Cyber before publishing to Google Play store
 
-> Agent: The `todo-app` directory was initialized as a standalone git repository on `main`, `origin` was set to `https://github.com/marcingurbisz/todo-app.git`, and the initial commit was pushed successfully.
-> Changes: Added the first repo commit with the TODO ledger and connected the repo to GitHub.
-> Validation: Verified local repo creation, commit creation, branch tracking, and a successful push to `origin/main`.
+## README.md remarks
+* Address inline comments
+* Incorporate this file "Idea" into readme?
 
-## [DONE 2026-04-18.1] Prepare README.md and planned architecture base on "Initial idea"
-... in [todo-app](../../todo-app) dir.
+## Discuss architectural/tech stack choices
+What are pros and cons of:
+* React native
+* Kotlin
 
-> Agent: Added `README.md` with the MVP scope, mobile-first architecture, GitHub sync strategy, concurrency approach, and planned project structure.
-> Changes: Documented a React + TypeScript + Vite client packaged later with Capacitor and using the GitHub Git Data API for immediate commits.
-> Validation: Checked the repository state after adding the README and aligned the documented design with every requirement from the initial idea.
+Is Kotlin a one option or the are some sub-option? Any other choices worth considering?
 
-## [DONE 2026-04-18.1] Implement
+## Remarks to UI
+Setup screen (providing PAT) should be displayed as first screen only once and then access only via settings.
+After setup the main screen after starting up should be files tree view.
+At the end of this task please provide the screenshot for the views/screens.
 
-> Agent: Implemented a mobile-first React + TypeScript app that loads a GitHub repository tree, opens files for editing, creates files, moves or renames files across directories, deletes files, and publishes each mutation as a commit through the GitHub Git Data API.
-> Changes: Added the Vite project scaffold, repository settings storage, GitHub API client, file tree utilities, responsive UI, and initial unit tests for tree/path behavior.
-> Validation: Installed dependencies, ran `npm run build`, and ran `npm test` successfully after fixing the first-pass tree builder bug.
+## Testing with https://github.com/marcingurbisz/todo-app-test
+* You have a PAT with content rw access for todo-app-test in local secrets.md file. Use it for testing and do not share with anybody nor put into committed files :).
+* Prepare structure for testing based on exemplary structure from "Idea" under new directory ../todo-app-test and connect it to https://github.com/marcingurbisz/todo-app-test.
+* I also wonder what should be the proper setup so you can test with todo-app-test but you do not know this token? Some CLI that starts a server being a proxy to Github and providing PAT? Any other idea?
 
-## [DONE 2026-04-18.1] Think about verification
-How can you test what you've just implemented? Do you have all that you need or I need to install something for you to the devcontainer that you are using?
-Do you need github todo-test repo or it is not needed?
-If you have everything you need do the tests or at least try to test/verify what you can.
-Describe the concept for automatic tests and exploratory tests done by you for this project.
+## What are the alternatives for PAT authentication for this app?
 
-> Agent: The current devcontainer already had everything needed for local build, test, and browser smoke testing. No extra packages were required.
-> Changes: Tightened the build so it no longer emits tracked TypeScript artifacts, added verification guidance to `README.md`, and documented the recommended end-to-end test setup.
-> Validation: Ran `npm run build`, ran `npm test`, started the local Vite server, and smoke-tested the rendered UI in a browser. Live GitHub commit flows were not executed because there is no repository token in the environment.
-> Learning: A dedicated `todo-test` repository or at least a dedicated test branch is not required for local validation, but it is strongly recommended for safe end-to-end verification of create, edit, move, delete, and conflict flows.
+## Perform exploratory test using todo-app-test
 
-## [DONE 2026-04-18.1] Give instructions how to publish it to Google Play store
+## Move README.md "Recommended release path" and "Release-readiness checks before store submission" to separate file
 
-> Agent: Added Google Play publishing instructions to `README.md`, including Capacitor packaging steps, Android Studio signing, Play Console submission flow, and the current release-readiness checks.
-> Changes: Documented the concrete commands to wrap the app for Android and called out the key blocker for a public store release: moving GitHub token handling out of browser storage.
-> Validation: Reviewed the publishing path against the current project shape and documented the safest recommendation: use the app locally or for internal Android testing first, then harden auth before public release.
+## Concurrency update discussions
+I also modify todo repo and push from my laptop but concurrency is not big. Right now the minor problem is that after changes from github mobile app I sometimes forgot to synch on laptop and then I have merge conflicts. But this is more to be solved on VS Code side.
+
+On mobile app side concurrency should not be a big deal as long as we pull/work on latest version before editing. What do you suggest to do if we have conflict on save/commit/push? Should be extremely rare to the point that I wonder if we need to care at all.
+
+Is there a way in VS code to have pull done automatically periodically/on changes in remote repo?
+
+# Notes
+
+## UI prompt
+Please create UI prototype considering "Idea".
+What tech stack do you suggest for implementation? Kotlin? React native? Other?
+
+## Claude Design
+
+## Next prompt
+* Instead of only preview can we have have it editable?
+* Leave raw view too
