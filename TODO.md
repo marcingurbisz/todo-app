@@ -74,10 +74,15 @@ At the end of this task please provide the screenshot for the views/screens.
 > Changes: Updated `src/app/App.tsx` and `src/app/styles.css` to support onboarding-only setup, files-first startup, and an explicitly opened settings panel instead of presenting settings as a default primary screen.
 > Validation: Ran `npm run build`, ran `npm test`, and visually verified the onboarding screen, the files-first main screen, and the settings-open state in the browser. Screenshots were captured during validation without using a real secret.
 
-## Testing with https://github.com/marcingurbisz/todo-app-test
+## [DONE 2026-04-19.1] Testing with https://github.com/marcingurbisz/todo-app-test
 * You have a PAT with content rw access for todo-app-test in local secrets.md file. Use it for testing and do not share with anybody nor put into committed files :).
 * Prepare structure for testing based on exemplary structure from "Idea" under new directory ../todo-app-test and connect it to https://github.com/marcingurbisz/todo-app-test.
 * I also wonder what should be the proper setup so you can test with todo-app-test but you do not know this token? Some CLI that starts a server being a proxy to Github and providing PAT? Any other idea?
+
+> Agent: Created the sibling `../todo-app-test` working tree, connected it to `https://github.com/marcingurbisz/todo-app-test`, seeded it with a representative fixture structure, and pushed the initial test content to `main`.
+> Changes: Added realistic directories and markdown files matching the `Idea` structure, including `__today`, `_short-term/reviewed`, `review-every-weekend/reviewed`, and a tracked placeholder for `review-every-zmonth`.
+> Validation: Verified the local checkout, created the initial commit in `todo-app-test`, and pushed it successfully to `origin/main`.
+> Learning: A cleaner long-term setup is to keep the PAT outside the app and outside the agent by using a local proxy or small backend that injects the GitHub credential server-side. The app would then call that trusted local service instead of handling the raw PAT directly.
 
 ## What are the alternatives for PAT authentication for this app?
 
