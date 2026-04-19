@@ -65,10 +65,14 @@ Is Kotlin a one option or the are some sub-option? Any other choices worth consi
 > Changes: Compared React Native, Kotlin with Jetpack Compose, Kotlin Multiplatform, Capacitor with the current React app, and smaller alternatives such as PWA-only and Flutter.
 > Validation: Aligned the recommendation with the actual codebase state: a working React web client already exists, so React + Capacitor is the best immediate path and Kotlin + Jetpack Compose is the best Android-only rewrite option if the project later pivots.
 
-## Remarks to UI
+## [DONE 2026-04-19.1] Remarks to UI
 Setup screen (providing PAT) should be displayed as first screen only once and then access only via settings.
 After setup the main screen after starting up should be files tree view.
 At the end of this task please provide the screenshot for the views/screens.
+
+> Agent: Implemented a dedicated first-run setup screen, removed the baked-in repository defaults from the app state, and changed the post-setup experience so the main screen opens in the file tree with settings available from a header action.
+> Changes: Updated `src/app/App.tsx` and `src/app/styles.css` to support onboarding-only setup, files-first startup, and an explicitly opened settings panel instead of presenting settings as a default primary screen.
+> Validation: Ran `npm run build`, ran `npm test`, and visually verified the onboarding screen, the files-first main screen, and the settings-open state in the browser. Screenshots were captured during validation without using a real secret.
 
 ## Testing with https://github.com/marcingurbisz/todo-app-test
 * You have a PAT with content rw access for todo-app-test in local secrets.md file. Use it for testing and do not share with anybody nor put into committed files :).

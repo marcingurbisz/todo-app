@@ -6,13 +6,13 @@ import type { FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
 const SETTINGS_STORAGE_KEY = "todo-app.settings";
 
 const DEFAULT_SETTINGS: RepoSettings = {
-  owner: "marcingurbisz",
-  repo: "todo",
-  branch: "main",
+  owner: "",
+  repo: "",
+  branch: "",
   token: "",
 };
 
-type PaneName = "files" | "editor" | "settings";
+type PaneName = "files" | "editor";
 
 function readStoredSettings(): RepoSettings {
   const fallback = { ...DEFAULT_SETTINGS };
@@ -35,6 +35,15 @@ function readStoredSettings(): RepoSettings {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected application error.";
+}
+
+function hasConfiguredSettings(settings: RepoSettings): boolean {
+  return Boolean(
+    settings.owner.trim() &&
+      settings.repo.trim() &&
+      settings.branch.trim() &&
+      settings.token.trim(),
+  );
 }
 
 function headLabel(snapshot: RepoSnapshot | null): string {
@@ -118,14 +127,17 @@ export function App() {
   const [newFilePath, setNewFilePath] = useState("");
   const [newFileContent, setNewFileContent] = useState("");
   const [activePane, setActivePane] = useState<PaneName>("files");
-  const [status, setStatus] = useState("Configure the repository token to start.");
+  const [status, setStatus] = useState("Complete setup to connect your private TODO repository.");
   const [error, setError] = useState("");
   const [isBusy, setIsBusy] = useState(false);
+  const [showSettings, setShowSettings] = useState(!hasConfiguredSettings(initialSettings));
 
   const hasUnsavedChanges = selectedPath !== "" && fileContent !== savedContent;
+  const isConfigured = hasConfiguredSettings(settings);
+  const isFirstRun = !isConfigured;
 
   useEffect(() => {
-    if (!initialSettings.token) {
+    if (!hasConfiguredSettings(initialSettings)) {
       return;
     }
 
@@ -252,8 +264,15 @@ export function App() {
       token: settingsDraft.token.trim(),
     };
 
+    if (!hasConfiguredSettings(nextSettings)) {
+      setError("Owner, repository, branch, and token are all required.");
+      return;
+    }
+
     setSettings(nextSettings);
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(nextSettings));
+    setShowSettings(false);
+    setActivePane("files");
     await syncRepository(nextSettings);
   }
 
@@ -344,6 +363,71 @@ export function App() {
     setNewFilePath(parentDirectory ? `${parentDirectory}/new-note.md` : "new-note.md");
   }
 
+  if (isFirstRun) {
+    return (
+      <div className="app-shell app-shell-onboarding">
+        <section className="onboarding-card">
+          <div className="onboarding-copy stack-gap">
+            <div>
+              <p className="eyebrow">First-run setup</p>
+              <h1>Connect your private TODO repository</h1>
+            </div>
+            <p className="hero-copy">
+              Enter the repository coordinates and a fine-grained GitHub token once. After setup, the app starts on the file tree and settings remain available from the main screen.
+            </p>
+            <div className="onboarding-points">
+              <div className="status-pill">
+                <span>Primary workflow</span>
+                <strong>Move notes between high-traffic folders fast</strong>
+              </div>
+              <div className="status-pill">
+                <span>Editing model</span>
+                <strong>Open, edit, move, and publish every change</strong>
+              </div>
+              <div className="status-pill">
+                <span>Security note</span>
+                <strong>Use a repo-scoped fine-grained token</strong>
+              </div>
+            </div>
+          </div>
+
+          <form className="settings-form onboarding-form" onSubmit={(event) => void handleSettingsSubmit(event)}>
+            <label className="field-group">
+              <span>Owner</span>
+              <input value={settingsDraft.owner} onChange={(event) => updateDraftSetting("owner", event.target.value)} placeholder="marcingurbisz" type="text" />
+            </label>
+            <label className="field-group">
+              <span>Repository</span>
+              <input value={settingsDraft.repo} onChange={(event) => updateDraftSetting("repo", event.target.value)} placeholder="todo" type="text" />
+            </label>
+            <label className="field-group">
+              <span>Branch</span>
+              <input value={settingsDraft.branch} onChange={(event) => updateDraftSetting("branch", event.target.value)} placeholder="main" type="text" />
+            </label>
+            <label className="field-group">
+              <span>GitHub token</span>
+              <input value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token with contents access" type="password" />
+            </label>
+            <button className="primary-button" disabled={isBusy} type="submit">
+              Save setup and load repository
+            </button>
+          </form>
+        </section>
+
+        <aside className="feedback-strip">
+          <div>
+            <strong>Status:</strong> {status}
+          </div>
+          {error ? (
+            <div className="feedback-error">
+              <strong>Error:</strong> {error}
+            </div>
+          ) : null}
+        </aside>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="hero-card">
@@ -354,20 +438,30 @@ export function App() {
             Browse the private TODO repository, edit files, move them across folders, and publish each action as a git commit.
           </p>
         </div>
-        <div className="status-cluster">
-          <div className="status-pill">
-            <span>Repo</span>
-            <strong>
-              {settings.owner}/{settings.repo}
-            </strong>
+        <div className="hero-side">
+          <div className="status-cluster">
+            <div className="status-pill">
+              <span>Repo</span>
+              <strong>
+                {settings.owner}/{settings.repo}
+              </strong>
+            </div>
+            <div className="status-pill">
+              <span>Branch</span>
+              <strong>{settings.branch}</strong>
+            </div>
+            <div className="status-pill">
+              <span>HEAD</span>
+              <strong>{headLabel(snapshot)}</strong>
+            </div>
           </div>
-          <div className="status-pill">
-            <span>Branch</span>
-            <strong>{settings.branch}</strong>
-          </div>
-          <div className="status-pill">
-            <span>HEAD</span>
-            <strong>{headLabel(snapshot)}</strong>
+          <div className="hero-actions">
+            <button className="secondary-button" disabled={isBusy} type="button" onClick={() => void syncRepository()}>
+              Refresh
+            </button>
+            <button className="ghost-button" type="button" onClick={() => setShowSettings((current) => !current)}>
+              {showSettings ? "Hide settings" : "Open settings"}
+            </button>
           </div>
         </div>
       </header>
@@ -375,19 +469,15 @@ export function App() {
       <nav className="pane-tabs" aria-label="Panels">
         <button className={activePane === "files" ? "pane-tab pane-tab-active" : "pane-tab"} type="button" onClick={() => setActivePane("files")}>Files</button>
         <button className={activePane === "editor" ? "pane-tab pane-tab-active" : "pane-tab"} type="button" onClick={() => setActivePane("editor")}>Editor</button>
-        <button className={activePane === "settings" ? "pane-tab pane-tab-active" : "pane-tab"} type="button" onClick={() => setActivePane("settings")}>Settings</button>
       </nav>
 
-      <main className="workspace-grid">
+      <main className={`workspace-grid${showSettings ? " workspace-grid-with-settings" : ""}`}>
         <section className={`panel panel-files${activePane === "files" ? " panel-mobile-active" : ""}`}>
           <div className="panel-header">
             <div>
               <p className="eyebrow">Repository tree</p>
               <h2>{snapshot ? `${snapshot.files.length} files` : "No repository loaded"}</h2>
             </div>
-            <button className="secondary-button" disabled={isBusy || !settings.token} type="button" onClick={() => void syncRepository()}>
-              Refresh
-            </button>
           </div>
 
           <div className="panel-body">
@@ -454,7 +544,7 @@ export function App() {
           </div>
         </section>
 
-        <section className={`panel panel-settings${activePane === "settings" ? " panel-mobile-active" : ""}`}>
+        <section className={`panel panel-settings panel-settings-visible${showSettings ? " panel-mobile-active" : ""}`}>
           <div className="panel-header">
             <div>
               <p className="eyebrow">Repository settings</p>
@@ -481,7 +571,7 @@ export function App() {
                 <input value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token with contents access" type="password" />
               </label>
               <button className="primary-button" disabled={isBusy} type="submit">
-                Save settings and load repo
+                Save settings
               </button>
             </form>
 

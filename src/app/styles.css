@@ -42,7 +42,14 @@ button {
   padding: 1rem;
 }
 
+.app-shell-onboarding {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
 .hero-card,
+.onboarding-card,
 .panel,
 .feedback-strip {
   backdrop-filter: blur(18px);
@@ -53,6 +60,12 @@ button {
 }
 
 .hero-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.onboarding-card {
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
@@ -84,6 +97,18 @@ button {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+}
+
+.hero-side,
+.hero-actions,
+.onboarding-copy,
+.onboarding-points {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hero-actions {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
 }
 
 .status-pill {
@@ -167,6 +192,15 @@ button {
 .workspace-grid {
   display: grid;
   gap: 1rem;
+}
+
+.panel.panel-settings {
+  display: none;
+}
+
+.panel.panel-settings-visible {
+  display: flex;
+  flex-direction: column;
 }
 
 .panel {
@@ -291,6 +325,11 @@ button {
   padding: 1rem;
 }
 
+.onboarding-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
 .empty-state {
   background: rgba(255, 255, 255, 0.56);
   border-radius: 1.25rem;
@@ -313,9 +352,18 @@ button {
     padding: 1.5rem;
   }
 
+  .app-shell-onboarding {
+    padding: 1.5rem;
+  }
+
   .hero-card {
     align-items: end;
     grid-template-columns: 1.6fr 1fr;
+    padding: 1.5rem;
+  }
+
+  .onboarding-card {
+    grid-template-columns: 1.1fr 0.95fr;
     padding: 1.5rem;
   }
 
@@ -324,12 +372,24 @@ button {
   }
 
   .workspace-grid {
-    grid-template-columns: 0.95fr 1.25fr 0.9fr;
+    grid-template-columns: 1fr 1.3fr;
+  }
+
+  .workspace-grid-with-settings {
+    grid-template-columns: 0.95fr 1.2fr 0.9fr;
   }
 
   .panel {
     display: flex;
     flex-direction: column;
     min-height: 38rem;
+  }
+
+  .panel.panel-settings {
+    display: none;
+  }
+
+  .panel.panel-settings-visible {
+    display: flex;
   }
 }
