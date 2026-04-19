@@ -84,7 +84,11 @@ At the end of this task please provide the screenshot for the views/screens.
 > Validation: Verified the local checkout, created the initial commit in `todo-app-test`, and pushed it successfully to `origin/main`.
 > Learning: A cleaner long-term setup is to keep the PAT outside the app and outside the agent by using a local proxy or small backend that injects the GitHub credential server-side. The app would then call that trusted local service instead of handling the raw PAT directly.
 
-## What are the alternatives for PAT authentication for this app?
+## [DONE 2026-04-19.1] What are the alternatives for PAT authentication for this app?
+
+> Agent: Documented the realistic alternatives in `docs/auth-options.md`.
+> Changes: Compared the current PAT-based MVP with a GitHub App plus backend, a backend proxy with stored PAT, a local companion service, OAuth plus backend, and git-over-SSH.
+> Validation: Aligned the recommendation with the real project constraints: for private personal use, a small proxy or companion service is the best next step; for a public Play Store release, GitHub App plus backend is the strongest target.
 
 ## Perform exploratory test using todo-app-test
 
