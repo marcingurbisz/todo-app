@@ -54,12 +54,16 @@ Representative structure from [../todo](../todo/):
 > Changes: Added a private single-user product context, representative repository structure, workflow summary, setup-provided repository configuration, and a more pragmatic test strategy centered on `todo-app-test` branches.
 > Validation: Re-read the README after the edit to ensure each inline `MG` comment was answered in place and the updated text stayed aligned with the TODO ledger.
 
-## Discuss architectural/tech stack choices
+## [DONE 2026-04-19.1] Discuss architectural/tech stack choices
 What are pros and cons of:
 * React native
 * Kotlin
 
 Is Kotlin a one option or the are some sub-option? Any other choices worth considering?
+
+> Agent: Documented the tradeoffs and recommendation in `docs/tech-stack-options.md`.
+> Changes: Compared React Native, Kotlin with Jetpack Compose, Kotlin Multiplatform, Capacitor with the current React app, and smaller alternatives such as PWA-only and Flutter.
+> Validation: Aligned the recommendation with the actual codebase state: a working React web client already exists, so React + Capacitor is the best immediate path and Kotlin + Jetpack Compose is the best Android-only rewrite option if the project later pivots.
 
 ## Remarks to UI
 Setup screen (providing PAT) should be displayed as first screen only once and then access only via settings.
