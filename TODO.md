@@ -90,7 +90,12 @@ At the end of this task please provide the screenshot for the views/screens.
 > Changes: Compared the current PAT-based MVP with a GitHub App plus backend, a backend proxy with stored PAT, a local companion service, OAuth plus backend, and git-over-SSH.
 > Validation: Aligned the recommendation with the real project constraints: for private personal use, a small proxy or companion service is the best next step; for a public Play Store release, GitHub App plus backend is the strongest target.
 
-## Perform exploratory test using todo-app-test
+## [DONE 2026-04-19.1] Perform exploratory test using todo-app-test
+
+> Agent: Ran a live end-to-end exploratory test against `marcingurbisz/todo-app-test` through the app UI, covering repo load, file open, create, edit, move, and delete on real GitHub data.
+> Changes: Confirmed the app could publish real commits to the disposable repository, then fixed a real stale-read defect in `src/app/lib/github.ts` by disabling fetch caching for GitHub API calls and waiting for the updated branch head to become visible before proceeding.
+> Validation: Verified real commits on `origin/main` for create, edit, move, and delete flows; confirmed the temporary exploratory files were fully removed afterward; reran `npm run build` and `npm test`; and repeated a create-then-delete regression pass without manual refresh, observing immediate `HEAD` and file-tree updates in the UI.
+> Learning: The earlier apparent delete inconsistency was not a failed publish. The remote branch had advanced correctly while the local disposable clone lagged behind and the browser reused stale GET responses. Disabling cache for GitHub API requests removed that false stale state and reduced follow-up 422 conflicts after fast consecutive operations.
 
 ## Move README.md "Recommended release path" and "Release-readiness checks before store submission" to separate file
 

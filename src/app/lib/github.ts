@@ -26,6 +26,9 @@ interface GitBlobResponse {
   sha: string;
 }
 
+const HEAD_SYNC_ATTEMPTS = 8;
+const HEAD_SYNC_DELAY_MS = 250;
+
 interface FileContentResponse {
   content: string;
   encoding: string;
@@ -79,6 +82,7 @@ async function apiRequest<Response>(
 ): Promise<Response> {
   const response = await fetch(`https://api.github.com/repos/${settings.owner}/${settings.repo}${path}`, {
     ...init,
+    cache: "no-store",
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${settings.token}`,
@@ -94,6 +98,27 @@ async function apiRequest<Response>(
   }
 
   return (await response.json()) as Response;
+}
+
+async function delay(milliseconds: number): Promise<void> {
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
+
+async function waitForBranchHead(settings: RepoSettings, expectedSha: string): Promise<void> {
+  for (let attempt = 0; attempt < HEAD_SYNC_ATTEMPTS; attempt += 1) {
+    const reference = await apiRequest<GitReferenceResponse>(
+      settings,
+      `/git/ref/heads/${branchPath(settings.branch)}`,
+    );
+
+    if (reference.object.sha === expectedSha) {
+      return;
+    }
+
+    await delay(HEAD_SYNC_DELAY_MS);
+  }
 }
 
 function formatApiError(error: unknown): Error {
@@ -228,6 +253,8 @@ export async function commitRepositoryChanges(
         force: false,
       }),
     });
+
+    await waitForBranchHead(settings, commit.sha);
 
     return commit.sha;
   } catch (error) {
