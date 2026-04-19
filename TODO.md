@@ -97,7 +97,11 @@ At the end of this task please provide the screenshot for the views/screens.
 > Validation: Verified real commits on `origin/main` for create, edit, move, and delete flows; confirmed the temporary exploratory files were fully removed afterward; reran `npm run build` and `npm test`; and repeated a create-then-delete regression pass without manual refresh, observing immediate `HEAD` and file-tree updates in the UI.
 > Learning: The earlier apparent delete inconsistency was not a failed publish. The remote branch had advanced correctly while the local disposable clone lagged behind and the browser reused stale GET responses. Disabling cache for GitHub API requests removed that false stale state and reduced follow-up 422 conflicts after fast consecutive operations.
 
-## Move README.md "Recommended release path" and "Release-readiness checks before store submission" to separate file
+## [DONE 2026-04-19.1] Move README.md "Recommended release path" and "Release-readiness checks before store submission" to separate file
+
+> Agent: Moved the long-form Google Play publication guidance out of `README.md` into `docs/google-play-release.md`.
+> Changes: Kept `README.md` short and product-focused while preserving the release path, release-readiness checks, and practical recommendation in a dedicated document.
+> Validation: Re-read the extracted content after the move to ensure the dedicated release doc still contains the previously documented setup and submission steps.
 
 ## Concurrency update discussions
 I also modify todo repo and push from my laptop but concurrency is not big. Right now the minor problem is that after changes from github mobile app I sometimes forgot to synch on laptop and then I have merge conflicts. But this is more to be solved on VS Code side.
