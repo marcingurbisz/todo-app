@@ -103,12 +103,17 @@ At the end of this task please provide the screenshot for the views/screens.
 > Changes: Kept `README.md` short and product-focused while preserving the release path, release-readiness checks, and practical recommendation in a dedicated document.
 > Validation: Re-read the extracted content after the move to ensure the dedicated release doc still contains the previously documented setup and submission steps.
 
-## Concurrency update discussions
+## [DONE 2026-04-19.1] Concurrency update discussions
 I also modify todo repo and push from my laptop but concurrency is not big. Right now the minor problem is that after changes from github mobile app I sometimes forgot to synch on laptop and then I have merge conflicts. But this is more to be solved on VS Code side.
 
 On mobile app side concurrency should not be a big deal as long as we pull/work on latest version before editing. What do you suggest to do if we have conflict on save/commit/push? Should be extremely rare to the point that I wonder if we need to care at all.
 
 Is there a way in VS code to have pull done automatically periodically/on changes in remote repo?
+
+> Agent: Documented the detailed guidance in `docs/concurrency-guidance.md` and linked it from the README concurrency section.
+> Changes: Recommended keeping the mobile app simple in phase one: refresh on startup/resume and before writes, reject stale writes, and offer a refresh-and-retry recovery path instead of automatic merges. Also documented the laptop-side recommendation to use VS Code automatic fetch plus a `pull --ff-only` habit, rather than unattended automatic pull into an active working tree.
+> Validation: Aligned the guidance with the behavior observed during the live `todo-app-test` exploratory session, including real stale-head conflicts and the now-fixed stale-read behavior after publish.
+> Learning: For this project, full merge automation is not worth the complexity yet. The rare-conflict path should stay explicit and recoverable, while the laptop workflow should rely on frequent fetch and deliberate fast-forward pulls.
 
 # Notes
 

@@ -102,6 +102,8 @@ Phase one:
 - Reject writes if the branch head changed since the last synced state.
 - Ask the user to reload before retrying.
 
+Detailed practical guidance for mobile conflict handling and VS Code sync habits lives in `docs/concurrency-guidance.md`.
+
 Phase two candidates:
 
 - background polling or pull-on-resume
