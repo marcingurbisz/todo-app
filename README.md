@@ -4,6 +4,41 @@ Mobile-first TODO repository client for the private `todo` GitHub repository.
 
 The app is meant to give fast Android access to the existing file-based TODO system without changing the storage format. Files remain the source of truth. The app reads the repository tree, lets the user edit or move files, and publishes every confirmed change back to GitHub.
 
+## Product context
+
+This app is designed for one private TODO workflow, not as a collaborative multi-user product. The expected usage is a single user operating on a private repository with a directory layout optimized around daily movement of markdown notes between a few high-traffic folders.
+
+Representative repository shape:
+
+```text
+todo/
+  __now/
+    todo-app.md
+  __today/
+    flowlite.md
+    mails.md
+    publishing.md
+    tomorrow/
+      settle-the-tax
+  _short-term/
+    reviewed/
+      ief.md
+      how-to-live-well.md
+      always-on-agent-with-access-to-repo.md
+  review-every-weekend/
+    reviewed/
+      kuba-badania.md
+      health.md
+  review-every-zmonth/
+```
+
+Core workflows for the app:
+
+- move files between directories in 2-3 clicks or via drag and drop
+- treat the file tree as the primary landing view after setup
+- open a markdown file into an editable preview with optional raw mode
+- publish each confirmed change directly to the repository
+
 ## Product goals
 
 - Browse all TODO files and directories.
@@ -17,11 +52,13 @@ The app is meant to give fast Android access to the existing file-based TODO sys
 The first implementation targets one user and one repository.
 
 > MG: I do not foresee now that this app will be used by many users against the same repo. This todo app is for private todos. I think it's worth to add such note here or maybe even somewhere above.
+> Agent: Added `Product context` above and kept the MVP wording explicitly single-user and private-repository oriented.
 
 - Authentication is done with a GitHub personal access token entered in app settings.
-- The app works against a configured repository and branch, defaulting to `marcingurbisz/todo` on `main`.
+- The app works against a repository and branch provided during first-run setup.
 
 > MG: Should be no default. Should be always provided during setup.
+> Agent: Changed the README to require repository and branch during setup instead of documenting a default target.
 
 - Each mutating action creates a commit in the target repository.
 - Before each mutating action, the app refreshes the latest branch head.
@@ -137,13 +174,14 @@ Recommended test setup for safe end-to-end verification:
 - a fine-grained token with contents access limited to that test target
 - a small fixture tree with nested directories and markdown files
 
-Automatic test concepts for the next phase:
+Automatic tests for the current project should stay pragmatic and close to the real repository workflow:
 
-- unit tests for commit payload generation for create, edit, move, and delete actions
-- integration tests with mocked GitHub API responses for load, read, publish success, and publish conflict paths
-- UI tests for file selection, unsaved changes prompts, and settings persistence
+- automated tests can run against separate branches of `todo-app-test`, for example one branch for repeatable scripted checks and another for freer exploratory work
+- the most valuable automated coverage is around real create, edit, move, delete, and reload flows against disposable repository state
+- a smaller amount of local unit coverage is still useful for deterministic path and tree transformations that do not need GitHub access
 
 > MG: Not sure if we need that. Don't you think that automatic tests that use real todo-app-test repo + exploratory/free test on that repo are enough? Automatic and exploratory tests can you two different branches of todo-app-test.
+> Agent: Agreed for this project phase. The README now treats real-repository testing on separate `todo-app-test` branches as the primary strategy, with only lightweight local unit tests for pure helper logic.
 
 Exploratory test checklist:
 

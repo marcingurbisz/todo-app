@@ -46,9 +46,13 @@ Representative structure from [../todo](../todo/):
 ## [FOR HUMAN] For human
 * Execute GPT-5.4-Cyber before publishing to Google Play store
 
-## README.md remarks
+## [DONE 2026-04-19.1] README.md remarks
 * Address inline comments
 * Incorporate this file "Idea" into readme?
+
+> Agent: Addressed the inline comments in `README.md` and incorporated the substance of the `Idea` section into the README as product context, workflow expectations, and setup assumptions.
+> Changes: Added a private single-user product context, representative repository structure, workflow summary, setup-provided repository configuration, and a more pragmatic test strategy centered on `todo-app-test` branches.
+> Validation: Re-read the README after the edit to ensure each inline `MG` comment was answered in place and the updated text stayed aligned with the TODO ledger.
 
 ## Discuss architectural/tech stack choices
 What are pros and cons of:
