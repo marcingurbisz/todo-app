@@ -2,23 +2,48 @@
 
 I miss the TODO app that gives me the good access to my todos on my android. My todos are stored as files in [todo](../todo/) dir which is also private github repo. Since my primary app for interacting with my todos is VS Code I have very specific repo structure and workflows.
 
-> MG: Put example of my structure here
+Representative structure from [../todo](../todo/):
 
-Workflows/requirements:
+```text
+ todo/
+   __now/
+     todo-app.md
+   __today/
+     flowlite.md
+     mails.md
+     publishing.md
+     tomorrow/
+       settle-the-tax
+   _short-term/
+     reviewed/
+       ief.md
+       how-to-live-well.md
+       always-on-agent-with-access-to-repo.md
+   review-every-weekend/
+     reviewed/
+       kuba-badania.md
+       health.md
+   review-every-zmonth/
+     
+ ```
+
+## Workflows
+
 * Moving files from one dir to another is done very often so it should be easy - 2-3 clicks max or drag and drop.
   * I every day move all files from __today/tomorrow to __today and during the day one by one from __today to tomorrow or to _short-term. 
   * In similar way I everyday move __short-term/reviewed to __short-term and then one by one from _short-term to _short-term/reviewed
-* Probably files tree should be a primary view, what do you think?
+
+## Requirements
+
+* The primary view should be the files tree.
+  * Rationale: this matches the real repo structure and the important workflow which is moving files between directories.
 * I can edit and delete files
 * After click on specific file would be nice to have editable preview of markdown. Switch to raw text should be also possible.
 * Each change is published to the repo
 
-> MG: Separate workflows from requirements
-
 # TODO
 
 ## [FOR HUMAN] For human
-* Address inline remarks in "Idea" chapter
 * Execute GPT-5.4-Cyber before publishing to Google Play store
 
 ## README.md remarks
