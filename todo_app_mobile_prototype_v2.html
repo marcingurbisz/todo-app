@@ -1,0 +1,609 @@
+<h2 class="sr-only">Revised mobile prototype: icons render as spans to avoid button outlines, batch-move chips moved under directory action menus, working new-file dialog, and a dedicated settings screen with repo URL, branch, and PAT fields.</h2>
+
+<style>
+  .stage { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .device { width: 380px; max-width: 100%; background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; min-height: 680px; position: relative; }
+  .appbar { padding: 12px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; }
+  .appbar-title { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; color: var(--color-text-primary); }
+  .appbar-actions { display: flex; gap: 6px; align-items: center; }
+  .ibtn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--border-radius-md); cursor: pointer; color: var(--color-text-secondary); user-select: none; flex-shrink: 0; }
+  .ibtn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .ibtn svg { display: block; }
+  .sync-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-secondary); padding: 3px 9px; border-radius: 999px; background: var(--color-background-secondary); }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-success); }
+  .syncing .sync-dot { background: var(--color-text-warning); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .tree-scroll { flex: 1; overflow-y: auto; padding: 6px 0 80px; }
+  .node { display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 12px; cursor: pointer; min-height: 42px; }
+  .node:hover { background: var(--color-background-secondary); }
+  .node-chevron { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.15s; color: var(--color-text-tertiary); flex-shrink: 0; }
+  .node-chevron.open { transform: rotate(90deg); }
+  .node-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-tertiary); }
+  .node-label { font-size: 14px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dir-label { font-weight: 500; color: var(--color-text-primary); }
+  .file-label { color: var(--color-text-primary); }
+  .badge { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 500; line-height: 1.4; flex-shrink: 0; }
+  .editor-tools { padding: 8px 10px 8px 6px; display: flex; align-items: center; gap: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); flex-shrink: 0; }
+  .mode-toggle { display: inline-flex; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); overflow: hidden; font-size: 12px; flex-shrink: 0; }
+  .mode-btn { padding: 6px 11px; background: var(--color-background-secondary); border: 0; cursor: pointer; color: var(--color-text-secondary); }
+  .mode-btn.active { background: var(--color-background-primary); color: var(--color-text-primary); font-weight: 500; }
+  .editor-area { flex: 1; overflow-y: auto; padding: 14px 16px; }
+  .raw-ta { width: 100%; min-height: 340px; border: 0; outline: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; resize: none; background: transparent; color: var(--color-text-primary); padding: 0; }
+  .md-render { font-size: 14px; line-height: 1.65; cursor: text; }
+  .md-render h1 { font-size: 18px; font-weight: 500; margin: 0 0 10px; color: var(--color-text-primary); }
+  .md-render h2 { font-size: 16px; font-weight: 500; margin: 14px 0 8px; color: var(--color-text-primary); }
+  .md-render p { margin: 0 0 10px; }
+  .md-render ul, .md-render ol { margin: 0 0 10px; padding-left: 20px; }
+  .md-render li { margin: 2px 0; }
+  .md-render code { font-family: var(--font-mono); font-size: 12px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 3px; }
+  .md-hint { font-size: 11px; color: var(--color-text-tertiary); text-align: center; padding: 10px; margin-top: 14px; border-top: 0.5px dashed var(--color-border-tertiary); }
+  .action-bar { border-top: 0.5px solid var(--color-border-tertiary); padding: 9px 10px; display: flex; gap: 6px; background: var(--color-background-primary); flex-shrink: 0; }
+  .act-btn { flex: 1; padding: 9px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); border-radius: var(--border-radius-md); font-size: 13px; color: var(--color-text-primary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .act-btn:hover { background: var(--color-background-secondary); }
+  .act-btn.primary { background: var(--color-text-primary); color: var(--color-background-primary); border-color: var(--color-text-primary); }
+  .act-btn.primary:hover { opacity: 0.9; background: var(--color-text-primary); }
+  .act-btn.danger { color: var(--color-text-danger); }
+  .settings-area { flex: 1; overflow-y: auto; padding: 4px 16px 80px; }
+  .setting-group { margin-top: 18px; }
+  .setting-label { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 6px; }
+  .setting-hint { font-size: 11px; color: var(--color-text-tertiary); margin-top: 4px; line-height: 1.5; }
+  .setting-input { width: 100%; padding: 9px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); font-size: 13px; background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-mono); box-sizing: border-box; }
+  .setting-input:focus { outline: none; border-color: var(--color-border-info); }
+  .settings-head { padding: 10px 8px 10px 6px; display: flex; align-items: center; gap: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); flex-shrink: 0; }
+  .overlay { position: absolute; inset: 0; pointer-events: none; }
+  .overlay > * { pointer-events: auto; }
+  .sheet-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 5; }
+  .sheet { background: var(--color-background-primary); width: 100%; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 8px 0 14px; max-height: 78%; overflow-y: auto; }
+  .sheet-handle { width: 32px; height: 3px; background: var(--color-border-secondary); border-radius: 999px; margin: 4px auto 12px; }
+  .sheet-title { padding: 0 16px 4px; font-size: 15px; font-weight: 500; }
+  .sheet-subtitle { padding: 0 16px 12px; font-size: 12px; color: var(--color-text-secondary); }
+  .sheet-section { padding: 10px 16px 4px; font-size: 10px; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+  .sheet-row { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; min-height: 44px; }
+  .sheet-row:hover { background: var(--color-background-secondary); }
+  .sheet-row.suggested { background: var(--color-background-info); }
+  .sheet-row.suggested:hover { background: var(--color-background-info); opacity: 0.85; }
+  .dest-label { flex: 1; font-size: 14px; font-family: var(--font-mono); }
+  .dest-hint { font-size: 11px; color: var(--color-text-info); font-weight: 500; }
+  .row-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-secondary); }
+  .dialog-center { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; z-index: 6; padding: 20px; }
+  .dialog { background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 16px; max-width: 320px; width: 100%; }
+  .dlg-title { font-size: 15px; font-weight: 500; margin-bottom: 10px; }
+  .dlg-body { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 14px; line-height: 1.5; }
+  .dlg-input { width: 100%; padding: 9px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); font-size: 13px; margin-bottom: 10px; background: var(--color-background-primary); color: var(--color-text-primary); box-sizing: border-box; }
+  .dlg-input:focus { outline: none; border-color: var(--color-border-info); }
+  .dlg-select { width: 100%; padding: 9px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); font-size: 13px; background: var(--color-background-primary); color: var(--color-text-primary); margin-bottom: 14px; box-sizing: border-box; font-family: var(--font-mono); }
+  .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .dlg-btn { padding: 9px 14px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); border-radius: var(--border-radius-md); font-size: 13px; color: var(--color-text-primary); cursor: pointer; }
+  .dlg-btn:hover { background: var(--color-background-secondary); }
+  .dlg-btn.primary { background: var(--color-text-primary); color: var(--color-background-primary); border-color: var(--color-text-primary); }
+  .dlg-btn.danger { color: var(--color-text-danger); border-color: var(--color-border-danger); }
+  .toast { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--color-text-primary); color: var(--color-background-primary); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 10; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .fab { position: absolute; right: 14px; bottom: 14px; width: 46px; height: 46px; border-radius: 50%; background: var(--color-text-primary); color: var(--color-background-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; user-select: none; }
+  .caption { font-size: 12px; color: var(--color-text-secondary); max-width: 380px; text-align: center; line-height: 1.6; margin: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+</style>
+
+<div class="stage">
+  <div class="device" id="device">
+    <div class="appbar" id="appbar"></div>
+    <div class="screen" id="screen"></div>
+  </div>
+  <p class="caption">Tap <code>⋯</code> on a directory for <em>new file here</em> or <em>move all up</em>. The <code>+</code> FAB opens an inline new-file dialog.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+<script>
+  const initialFiles = {
+    '__now/todo-app.md': '# todo-app\n\nAndroid prototype for the markdown-based todo workflow.\n\n## Now\n\n- Wire up the move bottom sheet\n- Ship the editable preview\n- Smoke test against todo-app-test',
+    '__today/flowlite.md': '# FlowLite\n\nKotlin workflow engine — side project.\n\n- Triage open issues\n- Tag v0.3 snapshot\n- Reply to forum thread',
+    '__today/mails.md': '# Mails\n\nInbox zero run.\n\n- Accountant: PIT-38 clarification\n- KFS application follow-up\n- Reply to Kuba\'s school',
+    '__today/publishing.md': '# Publishing\n\nIEF and FlowLite outreach.\n\n- Draft LinkedIn post\n- Schedule dev.to article\n- DM Simon Willison',
+    '__today/tomorrow/settle-the-tax.md': '# Settle the tax\n\nPIT-38 late interest — finalize and submit.\n\n1. Pull broker statements\n2. Compute late interest\n3. Upload to e-Urząd Skarbowy',
+    '_short-term/reviewed/ief.md': '# IEF\n\nIdea Execution Framework — persistent memory for human-agent collaboration.',
+    '_short-term/reviewed/how-to-live-well.md': '# How to live well\n\nPersonal operating principles to revisit weekly.',
+    '_short-term/reviewed/always-on-agent-with-access-to-repo.md': '# Always-on agent with repo access\n\nExploration: persistent background agent with write access to a git repo.',
+    'review-every-weekend/reviewed/kuba-badania.md': '# Kuba — badania\n\nMath competition prep schedule and upcoming checkups.',
+    'review-every-weekend/reviewed/health.md': '# Health\n\nWeekly review: sleep, exercise, bloodwork reminders.',
+  };
+
+  const state = {
+    files: { ...initialFiles },
+    expanded: new Set(['__now', '__today', '__today/tomorrow', '_short-term', '_short-term/reviewed', 'review-every-weekend', 'review-every-weekend/reviewed']),
+    screen: 'tree',
+    selectedPath: null,
+    editorMode: 'preview',
+    editorDraft: '',
+    settings: { repoUrl: 'https://github.com/marcingurbisz/todo', branch: 'todo', pat: 'ghp_••••••••••••••••9k2x' },
+    settingsDraft: null,
+    sheet: null,
+    dialog: null,
+    toast: null,
+    syncing: false,
+  };
+
+  const folderColors = {
+    '__now': ['#FAECE7', '#712B13'],
+    '__today': ['#FAEEDA', '#633806'],
+    'tomorrow': ['#FAEEDA', '#854F0B'],
+    '_short-term': ['#E6F1FB', '#0C447C'],
+    'reviewed': ['#F1EFE8', '#444441'],
+    'review-every-weekend': ['#EEEDFE', '#3C3489'],
+    'review-every-zmonth': ['#EEEDFE', '#3C3489'],
+  };
+
+  const moveSuggestionMap = {
+    '__today/tomorrow': ['__today', '_short-term'],
+    '__today': ['__today/tomorrow', '_short-term', '__now'],
+    '__now': ['__today', '_short-term'],
+    '_short-term': ['_short-term/reviewed', '__today', '__now'],
+    '_short-term/reviewed': ['_short-term', '__today'],
+    'review-every-weekend': ['review-every-weekend/reviewed'],
+    'review-every-weekend/reviewed': ['review-every-weekend'],
+    'review-every-zmonth': ['_short-term'],
+  };
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function displayName(n) { return n.replace(/\.md$/, ''); }
+  function folderBadgeStyle(path) {
+    const name = path.split('/').pop();
+    const c = folderColors[name] || folderColors[path] || ['#F1EFE8', '#444441'];
+    return 'background:' + c[0] + ';color:' + c[1] + ';';
+  }
+  function parentDir(p) { const parts = p.split('/'); parts.pop(); return parts.join('/'); }
+  function sortOrder(name) {
+    if (name === '__now') return '0';
+    if (name === '__today') return '1';
+    if (name === 'tomorrow') return '2';
+    if (name === '_short-term') return '3';
+    if (name === 'reviewed') return '9_' + name;
+    if (name.startsWith('review-')) return '4_' + name;
+    return '5_' + name;
+  }
+
+  function buildTree() {
+    const root = { name: '', path: '', children: {}, files: [] };
+    const dirs = new Set(['review-every-zmonth']);
+    Object.keys(state.files).forEach(p => {
+      const parts = p.split('/');
+      for (let i = 0; i < parts.length - 1; i++) dirs.add(parts.slice(0, i + 1).join('/'));
+    });
+    dirs.forEach(dp => {
+      const parts = dp.split('/');
+      let node = root;
+      for (const part of parts) {
+        if (!node.children[part]) {
+          const np = node.path ? node.path + '/' + part : part;
+          node.children[part] = { name: part, path: np, children: {}, files: [] };
+        }
+        node = node.children[part];
+      }
+    });
+    Object.keys(state.files).forEach(p => {
+      const parts = p.split('/');
+      const filename = parts.pop();
+      let node = root;
+      for (const part of parts) node = node.children[part];
+      node.files.push({ name: filename, path: p });
+    });
+    return root;
+  }
+
+  function sortedChildren(node) {
+    const dirs = Object.values(node.children).sort((a, b) => sortOrder(a.name).localeCompare(sortOrder(b.name)));
+    const files = [...node.files].sort((a, b) => a.name.localeCompare(b.name));
+    return { dirs, files };
+  }
+
+  function getAllDirs() {
+    const dirs = new Set(['review-every-zmonth']);
+    Object.keys(state.files).forEach(p => {
+      const parts = p.split('/');
+      for (let i = 0; i < parts.length - 1; i++) dirs.add(parts.slice(0, i + 1).join('/'));
+    });
+    return [...dirs].sort((a, b) => {
+      const sa = sortOrder(a.split('/').pop()), sb = sortOrder(b.split('/').pop());
+      return sa.localeCompare(sb) || a.localeCompare(b);
+    });
+  }
+
+  function dirHasFiles(dirPath) {
+    const depth = dirPath.split('/').length + 1;
+    return Object.keys(state.files).some(p => p.startsWith(dirPath + '/') && p.split('/').length === depth);
+  }
+
+  function renderAppBar() {
+    const bar = document.getElementById('appbar');
+    if (state.screen === 'editor' || state.screen === 'settings') { bar.innerHTML = ''; bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    const syncing = state.syncing ? 'syncing' : '';
+    bar.innerHTML = `
+      <div class="appbar-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4M12 3v13m0 0l-4-4m4 4l4-4"/></svg>
+        <span>todo</span>
+      </div>
+      <div class="appbar-actions">
+        <span class="sync-chip ${syncing}"><span class="sync-dot"></span><span>${state.syncing ? 'publishing…' : 'synced'}</span></span>
+        <span class="ibtn" role="button" tabindex="0" id="settings-btn" aria-label="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+      </div>`;
+    document.getElementById('settings-btn').addEventListener('click', openSettings);
+  }
+
+  function renderTreeScreen() {
+    const tree = buildTree();
+    function renderNode(node, depth) {
+      const { dirs, files } = sortedChildren(node);
+      let html = '';
+      for (const d of dirs) {
+        const isOpen = state.expanded.has(d.path);
+        const count = Object.keys(d.children).length + d.files.length;
+        html += `<div class="node" data-toggle-dir="${esc(d.path)}" style="padding-left: ${12 + depth * 16}px;">
+          <span class="node-chevron ${isOpen ? 'open' : ''}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+          <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span class="node-label dir-label">${esc(d.name)}</span>
+          <span class="badge" style="${folderBadgeStyle(d.path)}">${count === 0 ? 'empty' : count}</span>
+          <span class="ibtn" role="button" tabindex="0" data-dir-menu="${esc(d.path)}" aria-label="Directory actions" style="width:28px;height:28px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+          </span>
+        </div>`;
+        if (isOpen) html += renderNode(d, depth + 1);
+      }
+      for (const f of files) {
+        html += `<div class="node" data-open-file="${esc(f.path)}" style="padding-left: ${12 + depth * 16 + 14}px;">
+          <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
+          <span class="node-label file-label">${esc(displayName(f.name))}</span>
+          <span class="ibtn" role="button" tabindex="0" data-file-menu="${esc(f.path)}" aria-label="File actions" style="width:28px;height:28px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+          </span>
+        </div>`;
+      }
+      return html;
+    }
+    return `<div class="tree-scroll">${renderNode(tree, 0)}</div><span class="fab" id="new-file-fab" role="button" tabindex="0" aria-label="New file"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>`;
+  }
+
+  function renderEditorScreen() {
+    const path = state.selectedPath;
+    const filename = path.split('/').pop();
+    const dir = parentDir(path) || '/';
+    const raw = state.editorDraft;
+    const body = state.editorMode === 'raw'
+      ? `<textarea class="raw-ta" id="raw-ta" spellcheck="false">${esc(raw)}</textarea>`
+      : `<div class="md-render" id="md-render">${typeof marked !== 'undefined' ? marked.parse(raw) : '<pre>' + esc(raw) + '</pre>'}</div><div class="md-hint">Tap preview to edit in raw mode</div>`;
+    return `<div class="editor-tools">
+      <span class="ibtn" role="button" tabindex="0" id="back-btn" aria-label="Back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </span>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-text-primary);">${esc(displayName(filename))}</div>
+        <div style="font-size:11px; color:var(--color-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--font-mono);">${esc(dir)}/</div>
+      </div>
+      <div class="mode-toggle">
+        <button class="mode-btn ${state.editorMode === 'preview' ? 'active' : ''}" data-mode="preview">Preview</button>
+        <button class="mode-btn ${state.editorMode === 'raw' ? 'active' : ''}" data-mode="raw">Raw</button>
+      </div>
+    </div>
+    <div class="editor-area">${body}</div>
+    <div class="action-bar">
+      <button class="act-btn" id="move-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M2 12h13M19 5v14"/></svg>Move</button>
+      <button class="act-btn danger" id="delete-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6M10 11v6M14 11v6"/></svg>Delete</button>
+      <button class="act-btn primary" id="save-btn">Save</button>
+    </div>`;
+  }
+
+  function renderSettingsScreen() {
+    const d = state.settingsDraft || state.settings;
+    return `<div class="settings-head">
+      <span class="ibtn" role="button" tabindex="0" id="settings-back" aria-label="Back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </span>
+      <div style="flex:1; font-size:15px; font-weight:500;">Settings</div>
+    </div>
+    <div class="settings-area">
+      <div class="setting-group">
+        <div class="setting-label">Repository URL</div>
+        <input class="setting-input" id="s-repo" type="text" value="${esc(d.repoUrl)}" spellcheck="false" />
+        <div class="setting-hint">The private GitHub repo that stores your todo markdown files.</div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Branch</div>
+        <input class="setting-input" id="s-branch" type="text" value="${esc(d.branch)}" spellcheck="false" />
+        <div class="setting-hint">Branch that holds the todo tree. Defaults to <code>todo</code>.</div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Personal access token</div>
+        <input class="setting-input" id="s-pat" type="password" value="${esc(d.pat)}" spellcheck="false" autocomplete="off" />
+        <div class="setting-hint">Fine-grained PAT with <code>contents: read/write</code> on this repo only. Stored in device keystore, never committed.</div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Sync</div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button class="act-btn" id="s-test" style="flex:1;">Test connection</button>
+          <button class="act-btn" id="s-pull" style="flex:1;">Pull now</button>
+        </div>
+        <div class="setting-hint">Last pull: a few seconds ago · 10 files</div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="act-btn" id="s-cancel">Cancel</button>
+      <button class="act-btn primary" id="s-save">Save</button>
+    </div>`;
+  }
+
+  function renderMoveSheet(path) {
+    const currentDir = parentDir(path);
+    const filename = path.split('/').pop();
+    const suggested = moveSuggestionMap[currentDir] || [];
+    const allDirs = getAllDirs().filter(d => d !== currentDir);
+    const other = allDirs.filter(d => !suggested.includes(d));
+    const row = (d, sug) => `<div class="sheet-row ${sug ? 'suggested' : ''}" data-move-to="${esc(d)}">
+      <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span class="dest-label">${esc(d)}/</span>${sug ? '<span class="dest-hint">suggested</span>' : ''}
+    </div>`;
+    return `<div class="sheet-backdrop" data-close-sheet><div class="sheet" data-stop>
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Move ${esc(displayName(filename))}</div>
+      <div class="sheet-subtitle">from <code>${esc(currentDir)}/</code></div>
+      ${suggested.length ? `<div class="sheet-section">Suggested</div>${suggested.map(d => row(d, true)).join('')}<div class="sheet-section">All directories</div>` : ''}
+      ${other.map(d => row(d, false)).join('')}
+    </div></div>`;
+  }
+
+  function renderDirMenuSheet(dirPath) {
+    const parent = parentDir(dirPath);
+    const hasFiles = dirHasFiles(dirPath);
+    const canMoveUp = parent !== '' && hasFiles;
+    const fileCount = Object.keys(state.files).filter(p => p.startsWith(dirPath + '/') && p.split('/').length === dirPath.split('/').length + 1).length;
+    return `<div class="sheet-backdrop" data-close-sheet><div class="sheet" data-stop>
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">${esc(dirPath.split('/').pop())}/</div>
+      <div class="sheet-subtitle"><code>${esc(dirPath)}/</code></div>
+      <div class="sheet-row" data-dir-action="new-file" data-dir="${esc(dirPath)}">
+        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/><path d="M12 11v6M9 14h6"/></svg>
+        <span style="flex:1; font-size:14px;">New file here</span>
+      </div>
+      ${canMoveUp ? `<div class="sheet-row" data-dir-action="move-up" data-dir="${esc(dirPath)}">
+        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <span style="flex:1; font-size:14px;">Move all ${fileCount} files up to <code>${esc(parent)}/</code></span>
+      </div>` : ''}
+    </div></div>`;
+  }
+
+  function renderNewFileDialog() {
+    const allDirs = getAllDirs();
+    const defaultDir = state.dialog.defaultDir || '__today';
+    const options = allDirs.map(d => `<option value="${esc(d)}" ${d === defaultDir ? 'selected' : ''}>${esc(d)}/</option>`).join('');
+    return `<div class="dialog-center" data-close-dialog><div class="dialog" data-stop>
+      <div class="dlg-title">New file</div>
+      <div class="dlg-body">Create a new markdown file in the selected directory. It publishes immediately.</div>
+      <div style="font-size:12px; font-weight:500; color:var(--color-text-secondary); margin-bottom:6px;">Name</div>
+      <input class="dlg-input" id="nf-name" type="text" placeholder="new-note" autofocus />
+      <div style="font-size:12px; font-weight:500; color:var(--color-text-secondary); margin-bottom:6px;">Directory</div>
+      <select class="dlg-select" id="nf-dir">${options}</select>
+      <div class="dlg-actions">
+        <span class="dlg-btn" role="button" tabindex="0" data-close-dialog>Cancel</span>
+        <span class="dlg-btn primary" role="button" tabindex="0" id="nf-create">Create</span>
+      </div>
+    </div></div>`;
+  }
+
+  function renderDeleteDialog(path) {
+    const filename = path.split('/').pop();
+    return `<div class="dialog-center" data-close-dialog><div class="dialog" data-stop>
+      <div class="dlg-title">Delete ${esc(displayName(filename))}?</div>
+      <div class="dlg-body">Removes the file from the repo. The delete commit is published immediately.</div>
+      <div class="dlg-actions">
+        <span class="dlg-btn" role="button" tabindex="0" data-close-dialog>Cancel</span>
+        <span class="dlg-btn danger" role="button" tabindex="0" id="confirm-delete">Delete</span>
+      </div>
+    </div></div>`;
+  }
+
+  function renderOverlays() {
+    const device = document.getElementById('device');
+    device.querySelectorAll('.overlay').forEach(el => el.remove());
+    const parts = [];
+    if (state.sheet && state.sheet.type === 'move-file') parts.push(renderMoveSheet(state.sheet.path));
+    if (state.sheet && state.sheet.type === 'dir-menu') parts.push(renderDirMenuSheet(state.sheet.path));
+    if (state.dialog && state.dialog.type === 'new-file') parts.push(renderNewFileDialog());
+    if (state.dialog && state.dialog.type === 'delete') parts.push(renderDeleteDialog(state.dialog.path));
+    if (state.toast) parts.push(`<div class="toast"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${esc(state.toast)}</div>`);
+    if (!parts.length) return;
+    const o = document.createElement('div');
+    o.className = 'overlay';
+    o.innerHTML = parts.join('');
+    device.appendChild(o);
+  }
+
+  function render() {
+    renderAppBar();
+    const screen = document.getElementById('screen');
+    if (state.screen === 'editor') screen.innerHTML = renderEditorScreen();
+    else if (state.screen === 'settings') screen.innerHTML = renderSettingsScreen();
+    else screen.innerHTML = renderTreeScreen();
+    renderOverlays();
+    bind();
+  }
+
+  function bind() {
+    document.querySelectorAll('[data-toggle-dir]').forEach(el => el.addEventListener('click', e => {
+      if (e.target.closest('[data-dir-menu]')) return;
+      const p = el.dataset.toggleDir;
+      state.expanded.has(p) ? state.expanded.delete(p) : state.expanded.add(p);
+      render();
+    }));
+    document.querySelectorAll('[data-dir-menu]').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      state.sheet = { type: 'dir-menu', path: el.dataset.dirMenu };
+      render();
+    }));
+    document.querySelectorAll('[data-open-file]').forEach(el => el.addEventListener('click', e => {
+      if (e.target.closest('[data-file-menu]')) return;
+      openFile(el.dataset.openFile);
+    }));
+    document.querySelectorAll('[data-file-menu]').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      state.sheet = { type: 'move-file', path: el.dataset.fileMenu };
+      render();
+    }));
+    document.querySelectorAll('[data-move-to]').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      performMove(state.sheet.path, el.dataset.moveTo);
+    }));
+    document.querySelectorAll('[data-dir-action]').forEach(el => el.addEventListener('click', e => {
+      e.stopPropagation();
+      const action = el.dataset.dirAction;
+      const dir = el.dataset.dir;
+      state.sheet = null;
+      if (action === 'new-file') { state.dialog = { type: 'new-file', defaultDir: dir }; render(); }
+      else if (action === 'move-up') performMoveAllUp(dir);
+    }));
+    document.querySelectorAll('[data-close-sheet]').forEach(el => el.addEventListener('click', e => {
+      if (e.target === el) { state.sheet = null; render(); }
+    }));
+    document.querySelectorAll('[data-close-dialog]').forEach(el => el.addEventListener('click', e => {
+      if (e.target === el || el.matches('.dlg-btn')) { state.dialog = null; render(); }
+    }));
+    document.querySelectorAll('[data-stop]').forEach(el => el.addEventListener('click', e => e.stopPropagation()));
+
+    const fab = document.getElementById('new-file-fab');
+    if (fab) fab.addEventListener('click', () => { state.dialog = { type: 'new-file', defaultDir: '__today' }; render(); });
+
+    const nfCreate = document.getElementById('nf-create');
+    if (nfCreate) nfCreate.addEventListener('click', () => {
+      const name = (document.getElementById('nf-name').value || '').trim().replace(/\.md$/, '');
+      const dir = document.getElementById('nf-dir').value;
+      if (!name) { flashInput('nf-name'); return; }
+      const path = dir + '/' + name + '.md';
+      if (state.files[path]) { alert('A file with that name already exists there.'); return; }
+      state.files[path] = '# ' + name + '\n\n';
+      state.expanded.add(dir);
+      state.dialog = null;
+      openFile(path);
+      simulatePublish('Created ' + name);
+    });
+
+    const back = document.getElementById('back-btn');
+    if (back) back.addEventListener('click', () => { state.screen = 'tree'; state.selectedPath = null; render(); });
+
+    document.querySelectorAll('[data-mode]').forEach(el => el.addEventListener('click', () => {
+      const ta = document.getElementById('raw-ta'); if (ta) state.editorDraft = ta.value;
+      state.editorMode = el.dataset.mode; render();
+    }));
+    const mdr = document.getElementById('md-render');
+    if (mdr) mdr.addEventListener('click', () => { state.editorMode = 'raw'; render(); });
+
+    const save = document.getElementById('save-btn');
+    if (save) save.addEventListener('click', () => {
+      const ta = document.getElementById('raw-ta'); if (ta) state.editorDraft = ta.value;
+      state.files[state.selectedPath] = state.editorDraft;
+      simulatePublish('Saved ' + state.selectedPath.split('/').pop());
+    });
+    const mv = document.getElementById('move-btn');
+    if (mv) mv.addEventListener('click', () => {
+      const ta = document.getElementById('raw-ta'); if (ta) state.editorDraft = ta.value;
+      state.sheet = { type: 'move-file', path: state.selectedPath }; render();
+    });
+    const del = document.getElementById('delete-btn');
+    if (del) del.addEventListener('click', () => { state.dialog = { type: 'delete', path: state.selectedPath }; render(); });
+
+    const cd = document.getElementById('confirm-delete');
+    if (cd) cd.addEventListener('click', () => {
+      const p = state.dialog.path;
+      delete state.files[p];
+      state.dialog = null; state.screen = 'tree'; state.selectedPath = null;
+      simulatePublish('Deleted ' + p.split('/').pop());
+    });
+
+    const sBack = document.getElementById('settings-back');
+    if (sBack) sBack.addEventListener('click', () => { state.settingsDraft = null; state.screen = 'tree'; render(); });
+    const sCancel = document.getElementById('s-cancel');
+    if (sCancel) sCancel.addEventListener('click', () => { state.settingsDraft = null; state.screen = 'tree'; render(); });
+    const sSave = document.getElementById('s-save');
+    if (sSave) sSave.addEventListener('click', () => {
+      state.settings = {
+        repoUrl: document.getElementById('s-repo').value,
+        branch: document.getElementById('s-branch').value,
+        pat: document.getElementById('s-pat').value,
+      };
+      state.settingsDraft = null; state.screen = 'tree';
+      simulatePublish('Settings saved');
+    });
+    const sTest = document.getElementById('s-test');
+    if (sTest) sTest.addEventListener('click', () => showToast('Connected · 10 files on todo'));
+    const sPull = document.getElementById('s-pull');
+    if (sPull) sPull.addEventListener('click', () => simulatePublish('Pulled · up to date'));
+  }
+
+  function openFile(path) {
+    state.selectedPath = path;
+    state.editorDraft = state.files[path] || '';
+    state.editorMode = 'preview';
+    state.screen = 'editor';
+    render();
+  }
+
+  function openSettings() {
+    state.settingsDraft = { ...state.settings };
+    state.screen = 'settings';
+    render();
+  }
+
+  function performMove(path, destDir) {
+    const filename = path.split('/').pop();
+    const newPath = destDir + '/' + filename;
+    if (state.files[newPath]) { alert('A file with that name already exists there.'); return; }
+    state.files[newPath] = state.files[path];
+    delete state.files[path];
+    state.sheet = null;
+    state.expanded.add(destDir);
+    if (state.selectedPath === path) { state.screen = 'tree'; state.selectedPath = null; }
+    simulatePublish('Moved to ' + destDir);
+  }
+
+  function performMoveAllUp(dirPath) {
+    const parent = parentDir(dirPath);
+    const depth = dirPath.split('/').length + 1;
+    const paths = Object.keys(state.files).filter(p => p.startsWith(dirPath + '/') && p.split('/').length === depth);
+    let moved = 0;
+    paths.forEach(p => {
+      const filename = p.split('/').pop();
+      const newPath = parent + '/' + filename;
+      if (!state.files[newPath]) {
+        state.files[newPath] = state.files[p];
+        delete state.files[p];
+        moved++;
+      }
+    });
+    state.expanded.add(parent);
+    state.sheet = null;
+    simulatePublish('Moved ' + moved + ' files up to ' + parent);
+  }
+
+  function flashInput(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor = 'var(--color-border-danger)';
+    setTimeout(() => { el.style.borderColor = ''; }, 900);
+    el.focus();
+  }
+
+  function simulatePublish(msg) {
+    state.syncing = true; state.toast = null; render();
+    setTimeout(() => {
+      state.syncing = false;
+      state.toast = msg + ' · published';
+      render();
+      setTimeout(() => { state.toast = null; render(); }, 1800);
+    }, 550);
+  }
+
+  function showToast(msg) {
+    state.toast = msg; render();
+    setTimeout(() => { if (state.toast === msg) { state.toast = null; render(); } }, 1800);
+  }
+
+  render();
+</script>

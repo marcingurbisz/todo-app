@@ -2,7 +2,7 @@
 
 Mobile-first TODO repository client for the private `todo` GitHub repository.
 
-The app is meant to give fast Android access to the existing file-based TODO system without changing the storage format. Files remain the source of truth. The app reads the repository tree, lets the user edit or move files, and publishes every confirmed change back to GitHub.
+The app is meant to give fast Android access to the existing file-based TODO system without changing the storage format. The app reads the repository tree, lets the user edit or move files, and publishes every confirmed change back to GitHub.
 
 ## Product context
 
@@ -34,7 +34,7 @@ todo/
 
 Core workflows for the app:
 
-- move files between directories in 2-3 clicks or via drag and drop
+- move files between directories in 2 clicks
 - treat the file tree as the primary landing view after setup
 - open a markdown file into an editable preview with optional raw mode
 - publish each confirmed change directly to the repository
@@ -49,17 +49,8 @@ Core workflows for the app:
 
 ## MVP scope
 
-The first implementation targets one user and one repository.
-
-> MG: I do not foresee now that this app will be used by many users against the same repo. This todo app is for private todos. I think it's worth to add such note here or maybe even somewhere above.
-> Agent: Added `Product context` above and kept the MVP wording explicitly single-user and private-repository oriented.
-
 - Authentication is done with a GitHub personal access token entered in app settings.
 - The app works against a repository and branch provided during first-run setup.
-
-> MG: Should be no default. Should be always provided during setup.
-> Agent: Changed the README to require repository and branch during setup instead of documenting a default target.
-
 - Each mutating action creates a commit in the target repository.
 - Before each mutating action, the app refreshes the latest branch head.
 - If the branch moved since the last loaded state and the update cannot be fast-forwarded, the app stops and asks the user to refresh.
@@ -73,10 +64,6 @@ This keeps concurrent update handling simple for phase one while avoiding silent
 - React and TypeScript single-page app.
 - Vite for local development and production builds.
 - Capacitor-ready structure so the web app can later be wrapped as an Android application.
-- Mobile-first split view:
-  - repository tree and actions
-  - editor/details panel
-  - sync and repository status area
 
 ## Data flow
 
@@ -87,46 +74,13 @@ This keeps concurrent update handling simple for phase one while avoiding silent
 5. Update the branch reference with `force=false` so concurrent changes fail instead of overwriting remote history.
 6. Refresh local state from the new head.
 
-## Why Git Data API instead of cloning in the app
-
-- It fits the requirement that every change is published immediately.
-- It keeps the Android client simpler than embedding full git plumbing from day one.
-- Move and delete can be expressed as one commit together with related edits.
-- Fast-forward ref updates provide a clean base for later concurrency improvements.
-
 ## Concurrency model
-
-Phase one:
 
 - Refresh often.
 - Reject writes if the branch head changed since the last synced state.
 - Ask the user to reload before retrying.
 
 Detailed practical guidance for mobile conflict handling and VS Code sync habits lives in `docs/concurrency-guidance.md`.
-
-Phase two candidates:
-
-- background polling or pull-on-resume
-- optimistic merge helpers for non-overlapping file edits
-- branch-based draft changes before publish
-
-## Planned structure
-
-```text
-todo-app/
-  src/
-    app/
-      App.tsx
-      components/
-      hooks/
-      lib/
-      styles/
-      types/
-    main.tsx
-  public/
-  README.md
-  TODO.md
-```
 
 ## Security notes
 
