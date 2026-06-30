@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { marked } from "marked";
 import { commitRepositoryChanges, loadRepository, readFileContent } from "./lib/github";
 import { getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
 import type { FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
@@ -13,6 +14,72 @@ const DEFAULT_SETTINGS: RepoSettings = {
 };
 
 type PaneName = "files" | "editor";
+type EditorMode = "preview" | "raw";
+
+const MOVE_SUGGESTIONS: Record<string, string[]> = {
+  "__today": ["__today/tomorrow", "_short-term", "__now"],
+  "__today/tomorrow": ["__today", "_short-term"],
+  "__now": ["__today", "_short-term"],
+  "_short-term": ["_short-term/reviewed", "__today", "__now"],
+  "_short-term/reviewed": ["_short-term", "__today"],
+  "review-every-weekend": ["review-every-weekend/reviewed"],
+  "review-every-weekend/reviewed": ["review-every-weekend"],
+  "review-every-zmonth": ["_short-term"],
+};
+
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
+
+function displayName(pathOrName: string): string {
+  const name = pathOrName.split("/").at(-1) ?? pathOrName;
+  return name.replace(/\.md$/i, "");
+}
+
+function badgeClassName(name: string): string {
+  if (name === "__now") {
+    return "folder-badge folder-badge-now";
+  }
+
+  if (name === "__today" || name === "tomorrow") {
+    return "folder-badge folder-badge-today";
+  }
+
+  if (name === "_short-term") {
+    return "folder-badge folder-badge-short";
+  }
+
+  if (name.startsWith("review-")) {
+    return "folder-badge folder-badge-review";
+  }
+
+  if (name === "reviewed") {
+    return "folder-badge folder-badge-reviewed";
+  }
+
+  return "folder-badge folder-badge-generic";
+}
+
+function listDirectoryPaths(nodes: FileTreeNode[]): string[] {
+  const directories: string[] = [];
+
+  for (const node of nodes) {
+    if (node.kind !== "directory") {
+      continue;
+    }
+
+    directories.push(node.path);
+    directories.push(...listDirectoryPaths(node.children));
+  }
+
+  return directories;
+}
+
+function getMoveSuggestions(path: string): string[] {
+  const parentDirectory = getParentDirectory(path);
+  return MOVE_SUGGESTIONS[parentDirectory] ?? [];
+}
 
 function readStoredSettings(): RepoSettings {
   const fallback = { ...DEFAULT_SETTINGS };
@@ -79,6 +146,7 @@ function TreeItem(props: TreeItemProps) {
         >
           <span className="tree-symbol">{isExpanded ? "−" : "+"}</span>
           <span className="tree-label">{node.name}</span>
+          <span className={badgeClassName(node.name)}>{node.name}</span>
         </button>
         {isExpanded ? (
           <ul className="tree-list">
@@ -108,7 +176,7 @@ function TreeItem(props: TreeItemProps) {
         onClick={() => onSelectFile(node.path)}
       >
         <span className="tree-symbol">•</span>
-        <span className="tree-label">{node.name}</span>
+        <span className="tree-label">{displayName(node.name)}</span>
       </button>
     </li>
   );
@@ -124,17 +192,30 @@ export function App() {
   const [fileContent, setFileContent] = useState("");
   const [savedContent, setSavedContent] = useState("");
   const [targetPath, setTargetPath] = useState("");
-  const [newFilePath, setNewFilePath] = useState("");
-  const [newFileContent, setNewFileContent] = useState("");
   const [activePane, setActivePane] = useState<PaneName>("files");
+  const [editorMode, setEditorMode] = useState<EditorMode>("preview");
   const [status, setStatus] = useState("Complete setup to connect your private TODO repository.");
   const [error, setError] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [showSettings, setShowSettings] = useState(!hasConfiguredSettings(initialSettings));
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createFileName, setCreateFileName] = useState("new-note.md");
+  const [createFileDirectory, setCreateFileDirectory] = useState("__today");
+  const [createFileContent, setCreateFileContent] = useState("");
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
 
   const hasUnsavedChanges = selectedPath !== "" && fileContent !== savedContent;
   const isConfigured = hasConfiguredSettings(settings);
   const isFirstRun = !isConfigured;
+  const previewHtml = useMemo(() => marked.parse(fileContent || "") as string, [fileContent]);
+  const directoryOptions = useMemo(() => {
+    if (!snapshot) {
+      return ["__today"];
+    }
+
+    return listDirectoryPaths(snapshot.tree);
+  }, [snapshot]);
+  const moveSuggestions = useMemo(() => getMoveSuggestions(selectedPath), [selectedPath]);
 
   useEffect(() => {
     if (!hasConfiguredSettings(initialSettings)) {
@@ -167,6 +248,7 @@ export function App() {
         setSavedContent("");
       }
 
+      setLastSyncAt(new Date().toLocaleString());
       setStatus(`Loaded ${nextSnapshot.files.length} files from HEAD ${headLabel(nextSnapshot)}.`);
     } catch (nextError) {
       setError(errorMessage(nextError));
@@ -191,6 +273,7 @@ export function App() {
       setTargetPath(path);
       setFileContent(content);
       setSavedContent(content);
+      setEditorMode("preview");
       setExpandedPaths((current) => mergeExpanded(current, path));
       setActivePane("editor");
       setStatus(`Opened ${path}.`);
@@ -222,14 +305,15 @@ export function App() {
     setTargetPath(nextSelectedPath);
     setFileContent(content);
     setSavedContent(content);
+    setEditorMode("preview");
 
     return nextSnapshot;
   }
 
-  async function publishChanges(message: string, changes: Array<{ path: string; content?: string; delete?: boolean }>, nextSelectedPath: string | null) {
+  async function publishChanges(message: string, changes: Array<{ path: string; content?: string; delete?: boolean }>, nextSelectedPath: string | null): Promise<boolean> {
     if (!snapshot) {
       setError("Sync the repository before publishing changes.");
-      return;
+      return false;
     }
 
     setIsBusy(true);
@@ -246,9 +330,11 @@ export function App() {
 
       const nextSnapshot = await reloadSnapshotWithSelection(nextSelectedPath);
       setStatus(`Published successfully. New HEAD ${headLabel(nextSnapshot)}.`);
+      return true;
     } catch (nextError) {
       setError(errorMessage(nextError));
       setStatus("Publish failed.");
+      return false;
     } finally {
       setIsBusy(false);
     }
@@ -277,7 +363,17 @@ export function App() {
   }
 
   async function handleCreateFile() {
-    const normalizedPath = normalizePath(newFilePath);
+    const trimmedName = createFileName.trim();
+
+    if (!trimmedName) {
+      setError("Enter a file name for the new file.");
+      return;
+    }
+
+    const fileName = trimmedName.includes(".") ? trimmedName : `${trimmedName}.md`;
+    const normalizedPath = normalizePath(
+      createFileDirectory ? `${createFileDirectory}/${fileName}` : fileName,
+    );
 
     if (!normalizedPath) {
       setError("Enter a file path for the new file.");
@@ -289,9 +385,19 @@ export function App() {
       return;
     }
 
-    await publishChanges(`Create ${normalizedPath}`, [{ path: normalizedPath, content: newFileContent }], normalizedPath);
-    setNewFilePath("");
-    setNewFileContent("");
+    const published = await publishChanges(
+      `Create ${normalizedPath}`,
+      [{ path: normalizedPath, content: createFileContent }],
+      normalizedPath,
+    );
+
+    if (!published) {
+      return;
+    }
+
+    setCreateFileName("new-note.md");
+    setCreateFileContent("");
+    setShowCreateDialog(false);
     setActivePane("editor");
   }
 
@@ -358,9 +464,22 @@ export function App() {
     );
   }
 
-  function seedNewFilePathFromSelection() {
-    const parentDirectory = getParentDirectory(selectedPath || newFilePath);
-    setNewFilePath(parentDirectory ? `${parentDirectory}/new-note.md` : "new-note.md");
+  function openSettings() {
+    setSettingsDraft(settings);
+    setShowSettings(true);
+  }
+
+  function closeSettings() {
+    setSettingsDraft(settings);
+    setShowSettings(false);
+  }
+
+  function openCreateDialog() {
+    const suggestedDirectory = getParentDirectory(selectedPath) || directoryOptions[0] || "__today";
+    setCreateFileDirectory(suggestedDirectory);
+    setCreateFileName("new-note.md");
+    setCreateFileContent("");
+    setShowCreateDialog(true);
   }
 
   if (isFirstRun) {
@@ -459,8 +578,8 @@ export function App() {
             <button className="secondary-button" disabled={isBusy} type="button" onClick={() => void syncRepository()}>
               Refresh
             </button>
-            <button className="ghost-button" type="button" onClick={() => setShowSettings((current) => !current)}>
-              {showSettings ? "Hide settings" : "Open settings"}
+            <button className="ghost-button" type="button" onClick={openSettings}>
+              Open settings
             </button>
           </div>
         </div>
@@ -507,9 +626,7 @@ export function App() {
             <div className="footer-note">
               Mutations use GitHub fast-forward ref updates, so concurrent changes are rejected instead of silently overwritten.
             </div>
-            <button className="ghost-button" disabled={isBusy || !settings.token} type="button" onClick={seedNewFilePathFromSelection}>
-              Suggest new file path
-            </button>
+            <div className="footer-note">Use file movement as the main status change, then delete the file when the task is done.</div>
           </div>
         </section>
 
@@ -530,30 +647,67 @@ export function App() {
           </div>
 
           <div className="panel-body stack-gap">
+            <div className="mode-toggle" aria-label="Editor mode">
+              <button className={editorMode === "preview" ? "mode-button mode-button-active" : "mode-button"} type="button" onClick={() => setEditorMode("preview")}>
+                Preview
+              </button>
+              <button className={editorMode === "raw" ? "mode-button mode-button-active" : "mode-button"} type="button" onClick={() => setEditorMode("raw")}>
+                Raw
+              </button>
+            </div>
             <label className="field-group">
               <span>Move or rename path</span>
               <input value={targetPath} onChange={(event) => setTargetPath(event.target.value)} placeholder="inbox/today/note.md" type="text" />
             </label>
+            {moveSuggestions.length > 0 ? (
+              <div className="suggestions-block">
+                <span className="suggestions-label">Suggested destinations</span>
+                <div className="suggestions-row">
+                  {moveSuggestions.map((path) => (
+                    <button key={path} className="suggestion-chip" type="button" onClick={() => setTargetPath(path)}>
+                      {path}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <button className="secondary-button" disabled={isBusy || !selectedPath} type="button" onClick={() => void handleMoveFile()}>
               Move or rename with commit
             </button>
-            <label className="field-group field-group-editor">
-              <span>File contents</span>
-              <textarea value={fileContent} onChange={(event) => setFileContent(event.target.value)} placeholder="Select a file to edit" />
-            </label>
+
+            {editorMode === "preview" ? (
+              <button className="markdown-preview" type="button" onClick={() => setEditorMode("raw")}>
+                <div className="markdown-preview-rendered" dangerouslySetInnerHTML={{ __html: previewHtml || "<p>Select a file to preview.</p>" }} />
+                <div className="markdown-preview-hint">Tap the preview to switch to raw editing.</div>
+              </button>
+            ) : (
+              <label className="field-group field-group-editor">
+                <span>File contents</span>
+                <textarea value={fileContent} onChange={(event) => setFileContent(event.target.value)} placeholder="Select a file to edit" />
+              </label>
+            )}
           </div>
         </section>
+      </main>
 
-        <section className={`panel panel-settings panel-settings-visible${showSettings ? " panel-mobile-active" : ""}`}>
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Repository settings</p>
-              <h2>GitHub access</h2>
+      <button className="floating-create-button" type="button" onClick={openCreateDialog}>
+        +
+      </button>
+
+      {showSettings ? (
+        <section className="settings-overlay" aria-label="Settings">
+          <div className="settings-screen">
+            <div className="settings-screen-header">
+              <div>
+                <p className="eyebrow">Settings</p>
+                <h2>GitHub access</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={closeSettings}>
+                Cancel
+              </button>
             </div>
-          </div>
 
-          <div className="panel-body stack-gap">
-            <form className="settings-form" onSubmit={(event) => void handleSettingsSubmit(event)}>
+            <form className="settings-form settings-screen-form" onSubmit={(event) => void handleSettingsSubmit(event)}>
               <label className="field-group">
                 <span>Owner</span>
                 <input value={settingsDraft.owner} onChange={(event) => updateDraftSetting("owner", event.target.value)} type="text" />
@@ -570,36 +724,68 @@ export function App() {
                 <span>GitHub token</span>
                 <input value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token with contents access" type="password" />
               </label>
+
+              <div className="settings-inline-actions">
+                <button className="secondary-button" disabled={isBusy} type="button" onClick={() => void syncRepository(settingsDraft)}>
+                  Test connection
+                </button>
+                <button className="ghost-button" disabled={isBusy} type="button" onClick={() => void syncRepository()}>
+                  Pull now
+                </button>
+              </div>
+
+              <div className="footer-note">
+                Last pull: {lastSyncAt ?? "not synced in this session"}
+              </div>
+
               <button className="primary-button" disabled={isBusy} type="submit">
                 Save settings
               </button>
             </form>
+          </div>
+        </section>
+      ) : null}
 
-            <div className="new-file-card stack-gap">
-              <div>
-                <p className="eyebrow">Quick create</p>
-                <h3>New file</h3>
-              </div>
-              <label className="field-group">
-                <span>New file path</span>
-                <input value={newFilePath} onChange={(event) => setNewFilePath(event.target.value)} placeholder="today/next-step.md" type="text" />
-              </label>
-              <label className="field-group field-group-editor field-group-editor-small">
-                <span>Initial content</span>
-                <textarea value={newFileContent} onChange={(event) => setNewFileContent(event.target.value)} placeholder="Write the first note content" />
-              </label>
-              <button className="secondary-button" disabled={isBusy || !settings.token} type="button" onClick={() => void handleCreateFile()}>
+      {showCreateDialog ? (
+        <section className="dialog-overlay" aria-label="Create file dialog">
+          <div className="dialog-card stack-gap">
+            <div>
+              <p className="eyebrow">Quick create</p>
+              <h2>New file</h2>
+            </div>
+
+            <label className="field-group">
+              <span>Directory</span>
+              <select value={createFileDirectory} onChange={(event) => setCreateFileDirectory(event.target.value)}>
+                {directoryOptions.map((path) => (
+                  <option key={path} value={path}>
+                    {path}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field-group">
+              <span>File name</span>
+              <input value={createFileName} onChange={(event) => setCreateFileName(event.target.value)} placeholder="new-note.md" type="text" />
+            </label>
+
+            <label className="field-group field-group-editor field-group-editor-small">
+              <span>Initial content</span>
+              <textarea value={createFileContent} onChange={(event) => setCreateFileContent(event.target.value)} placeholder="Write the first note content" />
+            </label>
+
+            <div className="dialog-actions">
+              <button className="ghost-button" type="button" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </button>
+              <button className="primary-button" disabled={isBusy || !settings.token} type="button" onClick={() => void handleCreateFile()}>
                 Create with commit
               </button>
             </div>
           </div>
-
-          <div className="panel-footer stack-gap">
-            <div className="footer-note">Use a fine-grained GitHub token limited to the private `todo` repository.</div>
-            <div className="footer-note">For Play Store packaging, the token storage should move from local storage to native secure storage.</div>
-          </div>
         </section>
-      </main>
+      ) : null}
 
       <aside className="feedback-strip">
         <div>

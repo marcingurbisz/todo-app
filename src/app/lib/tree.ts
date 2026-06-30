@@ -1,12 +1,43 @@
 import type { FileTreeNode, RepoFileEntry } from "../types";
 
+function sortKey(name: string): string {
+  if (name === "__now") {
+    return "00";
+  }
+
+  if (name === "__today") {
+    return "01";
+  }
+
+  if (name === "_short-term") {
+    return "02";
+  }
+
+  if (name.startsWith("review-")) {
+    return `03_${name.toLowerCase()}`;
+  }
+
+  if (name === "reviewed") {
+    return `04_${name.toLowerCase()}`;
+  }
+
+  if (name === "tomorrow") {
+    return "05_tomorrow";
+  }
+
+  return `10_${name.toLowerCase()}`;
+}
+
 function sortNodes(nodes: FileTreeNode[]): FileTreeNode[] {
   nodes.sort((left, right) => {
     if (left.kind !== right.kind) {
       return left.kind === "directory" ? -1 : 1;
     }
 
-    return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+    const leftKey = sortKey(left.name);
+    const rightKey = sortKey(right.name);
+
+    return leftKey.localeCompare(rightKey, undefined, { sensitivity: "base" });
   });
 
   for (const node of nodes) {

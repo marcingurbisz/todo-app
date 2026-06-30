@@ -24,4 +24,22 @@ describe("tree helpers", () => {
     expect(tree.map((node) => node.path)).toEqual(["alpha", "zeta.md"]);
     expect(tree[0].children.map((node) => node.path)).toEqual(["alpha/first.md", "alpha/second.md"]);
   });
+
+  it("sorts top-level workflow directories by semantic priority", () => {
+    const tree = buildFileTree([
+      { path: "review-every-weekend/health.md", sha: "1", mode: "100644" },
+      { path: "_short-term/idea.md", sha: "2", mode: "100644" },
+      { path: "__today/task.md", sha: "3", mode: "100644" },
+      { path: "__now/focus.md", sha: "4", mode: "100644" },
+      { path: "zeta.md", sha: "5", mode: "100644" },
+    ]);
+
+    expect(tree.map((node) => node.path)).toEqual([
+      "__now",
+      "__today",
+      "_short-term",
+      "review-every-weekend",
+      "zeta.md",
+    ]);
+  });
 });
