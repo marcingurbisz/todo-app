@@ -117,13 +117,19 @@ npm run build
 npm test
 ```
 
+Opt-in scripted live repository automation:
+
+```bash
+TODO_APP_LIVE_E2E=1 TODO_APP_TEST_TOKEN=... npm run test:live
+```
+
 ## Verification strategy
 
 Current state of verification:
 
 - local automated coverage exists for deterministic helper logic only
 - live exploratory verification has already been executed against `todo-app-test`
-- there is not yet a scripted end-to-end test suite that drives the real `todo-app-test` repository automatically
+- scripted live-repository automation exists as an opt-in test path against disposable `todo-app-test` branches
 
 What can be verified in the current devcontainer without extra secrets:
 
@@ -138,11 +144,12 @@ What has already been verified with a real GitHub-backed test target:
 - creating, editing, moving, and deleting files through the app UI
 - reloading the tree after publish against real `origin/main`
 - conflict-adjacent behavior around stale remote reads, which led to the cache and head-sync fix in the GitHub API layer
+- scripted create, edit, move, and delete automation against a disposable `todo-app-test` branch through the shared GitHub API client
 
 What is still missing on the automated side:
 
-- scripted end-to-end checks that run repeatedly against a dedicated `todo-app-test` branch
-- a repeatable branch reset or fixture refresh step for those scripted checks
+- browser-driven UI automation against the real app
+- a dedicated reusable fixture-reset flow if the scripted branch strategy stops being sufficient
 
 What still benefits from a real GitHub-backed test run:
 

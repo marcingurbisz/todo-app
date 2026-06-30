@@ -100,6 +100,12 @@ Is there a way in VS code to have pull done automatically periodically/on change
 > Changes: Added Capacitor dependencies, generated `capacitor.config.ts`, scaffolded the `android/` project, added helper scripts for Android sync/open, and wrote `docs/android-developer-install.md` with the exact phone-install workflow.
 > Validation: Ran `npm run android:sync` successfully. Also attempted a local Gradle debug build and confirmed the remaining blocker is environment-only: the devcontainer does not have Android SDK configured. After switching to JDK 21, Gradle started correctly and failed only on missing Android SDK location.
 
+## [DONE 2026-06-30.2] Add scripted real-repo E2E automation
+
+> Agent: Added an opt-in live test that exercises the real GitHub API flow against disposable `todo-app-test` branches without committing any secret into the repository.
+> Changes: Made the shared GitHub client Node-compatible, added `npm run test:live`, and created `src/app/lib/github.live.test.ts` to automate create, edit, move, and delete against a temporary branch that is cleaned up afterward.
+> Validation: Ran `npm test` successfully and ran `TODO_APP_LIVE_E2E=1 ... npm run test:live` successfully against a real disposable `todo-app-test` branch, observing a full passing live flow.
+
 # Notes
 
 ## UI prompt
