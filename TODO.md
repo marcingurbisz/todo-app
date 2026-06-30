@@ -112,6 +112,12 @@ Is there a way in VS code to have pull done automatically periodically/on change
 > Changes: Added Playwright with a dedicated live UI spec, introduced minimal accessible labels for stable browser selectors, added a local launcher that reads the ignored `secrets.md` token automatically, and ignored Playwright output artifacts.
 > Validation: Ran `npm run test:ui:live:local` successfully against a real disposable `todo-app-test` branch and observed a full passing UI flow covering setup, create, edit, move, and delete.
 
+## [DONE 2026-06-30.4] Add unified local live-test runners
+
+> Agent: Added local launchers for the API live test and a combined all-live entry point so real-repo verification no longer requires manual env assembly.
+> Changes: Refactored the shared token-loading and env bootstrap into a reusable helper, added `npm run test:live:local` and `npm run test:live:all:local`, and tightened the existing live API test by removing a brittle final `headSha` assertion that did not reflect the real behavior contract.
+> Validation: Ran `npm run test:live:all:local` successfully, observing a full passing disposable-branch flow for both the shared GitHub API live test and the browser-driven UI live test.
+
 # Notes
 
 ## UI prompt

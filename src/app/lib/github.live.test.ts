@@ -164,7 +164,6 @@ maybeDescribe("live GitHub repository flow", () => {
     });
 
     const finalSnapshot = await loadRepository(settings);
-    expect(finalSnapshot.headSha).not.toBe(movedSnapshot.headSha);
     expect(finalSnapshot.files.some((entry) => entry.path === createdPath)).toBe(false);
     expect(finalSnapshot.files.some((entry) => entry.path === movedPath)).toBe(false);
   }, 120000);

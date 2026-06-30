@@ -121,7 +121,9 @@ Opt-in scripted live repository automation:
 
 ```bash
 TODO_APP_LIVE_E2E=1 TODO_APP_TEST_TOKEN=... npm run test:live
+npm run test:live:local
 npm run test:ui:live:local
+npm run test:live:all:local
 ```
 
 ## Verification strategy
@@ -132,6 +134,7 @@ Current state of verification:
 - live exploratory verification has already been executed against `todo-app-test`
 - scripted live-repository automation exists as an opt-in test path against disposable `todo-app-test` branches
 - browser-driven live UI automation exists as an opt-in test path against disposable `todo-app-test` branches
+- local convenience launchers exist for API-only, UI-only, and combined real-repo verification against disposable `todo-app-test` branches
 
 What can be verified in the current devcontainer without extra secrets:
 

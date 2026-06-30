@@ -1,3 +1,6 @@
+import { runNpmScript } from "./live-test-env.mjs";
+
+await runNpmScript("test:ui:live");
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 

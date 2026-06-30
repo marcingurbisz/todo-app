@@ -11,8 +11,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:live": "vitest run src/app/lib/github.live.test.ts",
+    "test:live:local": "node ./tools/run-live-api-test.mjs",
     "test:ui:live": "playwright test e2e/live-ui.spec.ts",
-    "test:ui:live:local": "node ./tools/run-live-ui-test.mjs"
+    "test:ui:live:local": "node ./tools/run-live-ui-test.mjs",
+    "test:live:all:local": "node ./tools/run-all-live-tests.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
