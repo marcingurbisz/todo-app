@@ -119,13 +119,32 @@ npm test
 
 ## Verification strategy
 
+Current state of verification:
+
+- local automated coverage exists for deterministic helper logic only
+- live exploratory verification has already been executed against `todo-app-test`
+- there is not yet a scripted end-to-end test suite that drives the real `todo-app-test` repository automatically
+
 What can be verified in the current devcontainer without extra secrets:
 
 - TypeScript compilation and production bundling.
 - Unit tests for path normalization and repository tree shaping.
 - Browser smoke testing of the responsive UI shell, editor flow, and settings flow.
 
-What still needs a real GitHub-backed test run:
+What has already been verified with a real GitHub-backed test target:
+
+- loading the disposable `todo-app-test` repository
+- opening files and reading real remote content
+- creating, editing, moving, and deleting files through the app UI
+- reloading the tree after publish against real `origin/main`
+- conflict-adjacent behavior around stale remote reads, which led to the cache and head-sync fix in the GitHub API layer
+
+What is still missing on the automated side:
+
+- scripted end-to-end checks that run repeatedly against a dedicated `todo-app-test` branch
+- a repeatable branch reset or fixture refresh step for those scripted checks
+
+What still benefits from a real GitHub-backed test run:
 
 - reading the private repository with a real token
 - committing file edits to GitHub
@@ -135,11 +154,11 @@ What still needs a real GitHub-backed test run:
 
 Recommended test setup for safe end-to-end verification:
 
-- a dedicated `todo-test` repository or a dedicated test branch in the private `todo` repository
+- the existing `todo-app-test` repository with separate branches for scripted and freer exploratory testing
 - a fine-grained token with contents access limited to that test target
 - a small fixture tree with nested directories and markdown files
 
-Automatic tests for the current project should stay pragmatic and close to the real repository workflow:
+Automatic tests for the next phase should stay pragmatic and close to the real repository workflow:
 
 - automated tests can run against separate branches of `todo-app-test`, for example one branch for repeatable scripted checks and another for freer exploratory work
 - the most valuable automated coverage is around real create, edit, move, delete, and reload flows against disposable repository state

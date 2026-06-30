@@ -47,8 +47,12 @@ Settings is a full screen reached from the gear icon: repository URL, branch, pe
 > Changes: Added semantic folder ordering (`__now` → `__today` → `_short-term` → `review-*`), colored folder badges, markdown `Preview/Raw` mode with tap-to-edit preview, suggested move destinations based on the current directory, a floating create button with inline dialog, and a full-screen settings view with `Test connection`, `Pull now`, and last-sync feedback.
 > Validation: Installed the new markdown renderer dependency, ran `npm run build`, and ran `npm test`, including a new test that verifies the workflow-specific directory ordering.
 
-## [NEW] Remarks to "Verification strategy" in README.md
+## [DONE 2026-06-30.1] Remarks to "Verification strategy" in README.md
 Since we introduced `todo-app-test` and automatic tests using it (do we have them already?) I think you should review and update this chapter as it seems not up to date.
+
+> Agent: Updated the README verification section so it reflects the real current testing state instead of an older planned-only version.
+> Changes: Clarified that local automated tests currently cover helper logic, that a live exploratory run against `todo-app-test` has already been executed, and that scripted real-repository E2E automation is still a next-phase task.
+> Validation: Re-read the updated verification section and checked the focused git diff to confirm the README now distinguishes completed live verification from still-missing scripted automation.
 
 ## [FOR HUMAN] For human
 * Execute GPT-5.4-Cyber before publishing to Google Play store
