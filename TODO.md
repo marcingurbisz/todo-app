@@ -92,9 +92,13 @@ Is there a way in VS code to have pull done automatically periodically/on change
 > Validation: Aligned the guidance with the behavior observed during the live `todo-app-test` exploratory session, including real stale-head conflicts and the now-fixed stale-read behavior after publish.
 > Learning: For this project, full merge automation is not worth the complexity yet. The rare-conflict path should stay explicit and recoverable, while the laptop workflow should rely on frequent fetch and deliberate fast-forward pulls.
 
-## [NEW] I'd like to install this app on my phone via developer settings
+## [DONE 2026-06-30.1] I'd like to install this app on my phone via developer settings
 * Prepare package for android
 * Give me instructions how to install it
+
+> Agent: Prepared the project for Android developer installation with Capacitor and documented the install path.
+> Changes: Added Capacitor dependencies, generated `capacitor.config.ts`, scaffolded the `android/` project, added helper scripts for Android sync/open, and wrote `docs/android-developer-install.md` with the exact phone-install workflow.
+> Validation: Ran `npm run android:sync` successfully. Also attempted a local Gradle debug build and confirmed the remaining blocker is environment-only: the devcontainer does not have Android SDK configured. After switching to JDK 21, Gradle started correctly and failed only on missing Android SDK location.
 
 # Notes
 
