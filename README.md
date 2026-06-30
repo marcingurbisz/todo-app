@@ -1,12 +1,14 @@
 # todo-app
 
-Mobile-first TODO repository client for the private `todo` GitHub repository.
+Android-first TODO client for a private Git-backed markdown workflow.
 
-The app is meant to give fast Android access to the existing file-based TODO system without changing the storage format. The app reads the repository tree, lets the user edit or move files, and publishes every confirmed change back to GitHub.
+The app is meant to give fast phone access to an existing file-based TODO system without changing the storage format. My primary app for interacting with these TODOs is VS Code, so the repository structure and the daily workflows are already highly opinionated. `todo-app` is designed around that existing shape instead of trying to turn it into a generic checkbox app.
 
 ## Product context
 
 This app is designed for one private TODO workflow, not as a collaborative multi-user product. The expected usage is a single user operating on a private repository with a directory layout optimized around daily movement of markdown notes between a few high-traffic folders.
+
+The core idea is simple: TODOs are markdown files in directories such as `__now/`, `__today/`, `_short-term/`, and review folders. The main workflow is not checking a box. The main workflow is moving a file to a different directory that represents its new status.
 
 Representative repository shape:
 
@@ -34,10 +36,13 @@ todo/
 
 Core workflows for the app:
 
-- move files between directories in 2 clicks
+- move files between directories as the primary gesture of the app
 - treat the file tree as the primary landing view after setup
 - open a markdown file into an editable preview with optional raw mode
 - publish each confirmed change directly to the repository
+- delete the file when the task is done
+
+Everything else in the product follows from that: tree view, editor, sync to GitHub, and conflict handling all exist mainly to support fast file movement across this repository structure.
 
 ## Product goals
 
@@ -46,6 +51,10 @@ Core workflows for the app:
 - Create, rename, move, and delete files or folders.
 - Publish each change to the repository immediately.
 - Stay usable on Android first, desktop second.
+
+Non-goal for this phase:
+
+- do not model completion as a checkbox workflow; completion is represented by deleting the file
 
 ## MVP scope
 
