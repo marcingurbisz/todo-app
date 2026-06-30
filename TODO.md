@@ -106,6 +106,12 @@ Is there a way in VS code to have pull done automatically periodically/on change
 > Changes: Made the shared GitHub client Node-compatible, added `npm run test:live`, and created `src/app/lib/github.live.test.ts` to automate create, edit, move, and delete against a temporary branch that is cleaned up afterward.
 > Validation: Ran `npm test` successfully and ran `TODO_APP_LIVE_E2E=1 ... npm run test:live` successfully against a real disposable `todo-app-test` branch, observing a full passing live flow.
 
+## [DONE 2026-06-30.3] Add browser-driven live UI automation
+
+> Agent: Added a real browser-driven automation path against disposable `todo-app-test` branches so the UI layer is covered in addition to the shared GitHub API client.
+> Changes: Added Playwright with a dedicated live UI spec, introduced minimal accessible labels for stable browser selectors, added a local launcher that reads the ignored `secrets.md` token automatically, and ignored Playwright output artifacts.
+> Validation: Ran `npm run test:ui:live:local` successfully against a real disposable `todo-app-test` branch and observed a full passing UI flow covering setup, create, edit, move, and delete.
+
 # Notes
 
 ## UI prompt

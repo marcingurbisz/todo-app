@@ -676,7 +676,7 @@ export function App() {
             </button>
 
             {editorMode === "preview" ? (
-              <button className="markdown-preview" type="button" onClick={() => setEditorMode("raw")}>
+              <button aria-label="Markdown preview" className="markdown-preview" type="button" onClick={() => setEditorMode("raw")}>
                 <div className="markdown-preview-rendered" dangerouslySetInnerHTML={{ __html: previewHtml || "<p>Select a file to preview.</p>" }} />
                 <div className="markdown-preview-hint">Tap the preview to switch to raw editing.</div>
               </button>
@@ -690,7 +690,7 @@ export function App() {
         </section>
       </main>
 
-      <button className="floating-create-button" type="button" onClick={openCreateDialog}>
+      <button aria-label="Create file" className="floating-create-button" type="button" onClick={openCreateDialog}>
         +
       </button>
 
