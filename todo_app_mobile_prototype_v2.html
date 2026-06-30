@@ -1,6 +1,77 @@
-<h2 class="sr-only">Revised mobile prototype: icons render as spans to avoid button outlines, batch-move chips moved under directory action menus, working new-file dialog, and a dedicated settings screen with repo URL, branch, and PAT fields.</h2>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>todo_app_mobile_prototype_v2</title>
 <style>
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f5f4ef;
+    --color-background-tertiary: #faf9f5;
+    --color-background-info: #e6f1fb;
+    --color-background-danger: #fcebeb;
+    --color-background-success: #eaf3de;
+    --color-background-warning: #faeeda;
+    --color-text-primary: #1a1a17;
+    --color-text-secondary: #5f5e5a;
+    --color-text-tertiary: #888780;
+    --color-text-info: #185fa5;
+    --color-text-danger: #a32d2d;
+    --color-text-success: #3b6d11;
+    --color-text-warning: #854f0b;
+    --color-border-tertiary: rgba(26,26,23,0.12);
+    --color-border-secondary: rgba(26,26,23,0.22);
+    --color-border-primary: rgba(26,26,23,0.32);
+    --color-border-info: #378add;
+    --color-border-danger: #e24b4a;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "StyreneB", Helvetica, Arial, sans-serif;
+    --font-serif: "Tiempos Text", Georgia, serif;
+    --font-mono: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1f1e1c;
+      --color-background-secondary: #2a2a28;
+      --color-background-tertiary: #262524;
+      --color-background-info: #0c447c;
+      --color-background-danger: #501313;
+      --color-background-success: #173404;
+      --color-background-warning: #412402;
+      --color-text-primary: #f5f4ef;
+      --color-text-secondary: #b4b2a9;
+      --color-text-tertiary: #888780;
+      --color-text-info: #b5d4f4;
+      --color-text-danger: #f7c1c1;
+      --color-text-success: #c0dd97;
+      --color-text-warning: #fac775;
+      --color-border-tertiary: rgba(245,244,239,0.15);
+      --color-border-secondary: rgba(245,244,239,0.3);
+      --color-border-primary: rgba(245,244,239,0.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    background: var(--color-background-tertiary);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 28px 16px;
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
   .stage { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .device { width: 380px; max-width: 100%; background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; min-height: 680px; position: relative; }
   .appbar { padding: 12px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; }
@@ -26,7 +97,7 @@
   .badge { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 500; line-height: 1.4; flex-shrink: 0; }
   .editor-tools { padding: 8px 10px 8px 6px; display: flex; align-items: center; gap: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); flex-shrink: 0; }
   .mode-toggle { display: inline-flex; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); overflow: hidden; font-size: 12px; flex-shrink: 0; }
-  .mode-btn { padding: 6px 11px; background: var(--color-background-secondary); border: 0; cursor: pointer; color: var(--color-text-secondary); }
+  .mode-btn { padding: 6px 11px; background: var(--color-background-secondary); border: 0; cursor: pointer; color: var(--color-text-secondary); font-family: inherit; }
   .mode-btn.active { background: var(--color-background-primary); color: var(--color-text-primary); font-weight: 500; }
   .editor-area { flex: 1; overflow-y: auto; padding: 14px 16px; }
   .raw-ta { width: 100%; min-height: 340px; border: 0; outline: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; resize: none; background: transparent; color: var(--color-text-primary); padding: 0; }
@@ -39,7 +110,7 @@
   .md-render code { font-family: var(--font-mono); font-size: 12px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 3px; }
   .md-hint { font-size: 11px; color: var(--color-text-tertiary); text-align: center; padding: 10px; margin-top: 14px; border-top: 0.5px dashed var(--color-border-tertiary); }
   .action-bar { border-top: 0.5px solid var(--color-border-tertiary); padding: 9px 10px; display: flex; gap: 6px; background: var(--color-background-primary); flex-shrink: 0; }
-  .act-btn { flex: 1; padding: 9px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); border-radius: var(--border-radius-md); font-size: 13px; color: var(--color-text-primary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .act-btn { flex: 1; padding: 9px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); border-radius: var(--border-radius-md); font-size: 13px; color: var(--color-text-primary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-family: inherit; }
   .act-btn:hover { background: var(--color-background-secondary); }
   .act-btn.primary { background: var(--color-text-primary); color: var(--color-background-primary); border-color: var(--color-text-primary); }
   .act-btn.primary:hover { opacity: 0.9; background: var(--color-text-primary); }
@@ -70,26 +141,30 @@
   .dialog { background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 16px; max-width: 320px; width: 100%; }
   .dlg-title { font-size: 15px; font-weight: 500; margin-bottom: 10px; }
   .dlg-body { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 14px; line-height: 1.5; }
-  .dlg-input { width: 100%; padding: 9px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); font-size: 13px; margin-bottom: 10px; background: var(--color-background-primary); color: var(--color-text-primary); box-sizing: border-box; }
+  .dlg-input { width: 100%; padding: 9px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); font-size: 13px; margin-bottom: 10px; background: var(--color-background-primary); color: var(--color-text-primary); box-sizing: border-box; font-family: inherit; }
   .dlg-input:focus { outline: none; border-color: var(--color-border-info); }
   .dlg-select { width: 100%; padding: 9px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); font-size: 13px; background: var(--color-background-primary); color: var(--color-text-primary); margin-bottom: 14px; box-sizing: border-box; font-family: var(--font-mono); }
   .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
-  .dlg-btn { padding: 9px 14px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); border-radius: var(--border-radius-md); font-size: 13px; color: var(--color-text-primary); cursor: pointer; }
+  .dlg-btn { padding: 9px 14px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); border-radius: var(--border-radius-md); font-size: 13px; color: var(--color-text-primary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; }
   .dlg-btn:hover { background: var(--color-background-secondary); }
   .dlg-btn.primary { background: var(--color-text-primary); color: var(--color-background-primary); border-color: var(--color-text-primary); }
   .dlg-btn.danger { color: var(--color-text-danger); border-color: var(--color-border-danger); }
   .toast { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--color-text-primary); color: var(--color-background-primary); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 10; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
   .fab { position: absolute; right: 14px; bottom: 14px; width: 46px; height: 46px; border-radius: 50%; background: var(--color-text-primary); color: var(--color-background-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; user-select: none; }
   .caption { font-size: 12px; color: var(--color-text-secondary); max-width: 380px; text-align: center; line-height: 1.6; margin: 0; }
-  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+  code { font-family: var(--font-mono); font-size: 0.9em; }
 </style>
+</head>
+<body>
+
+<h2 class="sr-only">Mobile prototype: Git-backed todo app where folders are status; icons render as spans to avoid button outlines, batch-move actions live under directory menus, and a settings screen holds repo URL, branch, and PAT.</h2>
 
 <div class="stage">
   <div class="device" id="device">
     <div class="appbar" id="appbar"></div>
     <div class="screen" id="screen"></div>
   </div>
-  <p class="caption">Tap <code>⋯</code> on a directory for <em>new file here</em> or <em>move all up</em>. The <code>+</code> FAB opens an inline new-file dialog.</p>
+  <p class="caption">Tap <code>&middot;&middot;&middot;</code> on a directory for <em>new file here</em> or <em>move all up</em>. The <code>+</code> FAB opens an inline new-file dialog.</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
@@ -607,3 +682,5 @@
 
   render();
 </script>
+</body>
+</html>
