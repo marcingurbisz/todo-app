@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./tree";
+import { buildFileTree, filterFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./tree";
 
 describe("tree helpers", () => {
   it("normalizes user-entered paths", () => {
@@ -41,5 +41,19 @@ describe("tree helpers", () => {
       "review-every-weekend",
       "zeta.md",
     ]);
+  });
+
+  it("filters the tree by path while preserving matching directory branches", () => {
+    const tree = buildFileTree([
+      { path: "__today/plan-alpha.md", sha: "1", mode: "100644" },
+      { path: "__today/plan-beta.md", sha: "2", mode: "100644" },
+      { path: "_short-term/backlog.md", sha: "3", mode: "100644" },
+    ]);
+
+    const filteredTree = filterFileTree(tree, "beta");
+
+    expect(filteredTree.map((node) => node.path)).toEqual(["__today"]);
+    expect(filteredTree[0].kind).toBe("directory");
+    expect(filteredTree[0].children.map((node) => node.path)).toEqual(["__today/plan-beta.md"]);
   });
 });

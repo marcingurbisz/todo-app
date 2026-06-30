@@ -133,3 +133,30 @@ export function buildFileTree(entries: RepoFileEntry[]): FileTreeNode[] {
 
   return sortNodes(rootNodes);
 }
+
+export function filterFileTree(nodes: FileTreeNode[], query: string): FileTreeNode[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return nodes;
+  }
+
+  return nodes.flatMap((node) => {
+    const matchesSelf = node.path.toLowerCase().includes(normalizedQuery);
+
+    if (node.kind === "file") {
+      return matchesSelf ? [node] : [];
+    }
+
+    const filteredChildren = filterFileTree(node.children, normalizedQuery);
+
+    if (!matchesSelf && filteredChildren.length === 0) {
+      return [];
+    }
+
+    return [{
+      ...node,
+      children: matchesSelf ? node.children : filteredChildren,
+    }];
+  });
+}

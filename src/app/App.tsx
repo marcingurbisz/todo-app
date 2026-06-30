@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { marked } from "marked";
 import { commitRepositoryChanges, loadRepository, readFileContent } from "./lib/github";
-import { getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
+import { filterFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
 import type { FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
 
 const SETTINGS_STORAGE_KEY = "todo-app.settings";
@@ -79,6 +79,16 @@ function listDirectoryPaths(nodes: FileTreeNode[]): string[] {
 function getMoveSuggestions(path: string): string[] {
   const parentDirectory = getParentDirectory(path);
   return MOVE_SUGGESTIONS[parentDirectory] ?? [];
+}
+
+function countFiles(nodes: FileTreeNode[]): number {
+  return nodes.reduce((total, node) => {
+    if (node.kind === "file") {
+      return total + 1;
+    }
+
+    return total + countFiles(node.children);
+  }, 0);
 }
 
 function readStoredSettings(): RepoSettings {
@@ -203,6 +213,7 @@ export function App() {
   const [createFileDirectory, setCreateFileDirectory] = useState("__today");
   const [createFileContent, setCreateFileContent] = useState("");
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const hasUnsavedChanges = selectedPath !== "" && fileContent !== savedContent;
   const isConfigured = hasConfiguredSettings(settings);
@@ -216,6 +227,12 @@ export function App() {
     return listDirectoryPaths(snapshot.tree);
   }, [snapshot]);
   const moveSuggestions = useMemo(() => getMoveSuggestions(selectedPath), [selectedPath]);
+  const filteredTree = useMemo(() => filterFileTree(snapshot?.tree ?? [], searchQuery), [searchQuery, snapshot]);
+  const visibleFileCount = useMemo(() => countFiles(filteredTree), [filteredTree]);
+  const effectiveExpandedPaths = useMemo(
+    () => (searchQuery.trim() ? listDirectoryPaths(filteredTree) : expandedPaths),
+    [expandedPaths, filteredTree, searchQuery],
+  );
 
   useEffect(() => {
     if (!hasConfiguredSettings(initialSettings)) {
@@ -595,25 +612,48 @@ export function App() {
           <div className="panel-header">
             <div>
               <p className="eyebrow">Repository tree</p>
-              <h2>{snapshot ? `${snapshot.files.length} files` : "No repository loaded"}</h2>
+              <h2>
+                {snapshot
+                  ? `${visibleFileCount} ${searchQuery.trim() ? "matching files" : "files"}`
+                  : "No repository loaded"}
+              </h2>
             </div>
           </div>
 
           <div className="panel-body">
             {snapshot ? (
-              <ul className="tree-list">
-                {snapshot.tree.map((node) => (
+              <>
+                <label className="field-group">
+                  <span>Search paths</span>
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="__today, review, publish..."
+                    type="search"
+                  />
+                </label>
+
+                <ul className="tree-list">
+                  {filteredTree.map((node) => (
                   <TreeItem
                     key={node.path}
                     depth={0}
-                    expandedPaths={expandedPaths}
+                    expandedPaths={effectiveExpandedPaths}
                     node={node}
                     onSelectFile={(path) => void loadSelectedFile(path)}
                     onToggleDirectory={toggleDirectory}
                     selectedPath={selectedPath}
                   />
-                ))}
-              </ul>
+                  ))}
+                </ul>
+
+                {filteredTree.length === 0 ? (
+                  <div className="empty-state empty-state-inline">
+                    <h3>No matching files</h3>
+                    <p>Try another path fragment or clear the search field.</p>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <div className="empty-state">
                 <h3>Connect the repository</h3>

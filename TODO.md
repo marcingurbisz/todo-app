@@ -118,6 +118,12 @@ Is there a way in VS code to have pull done automatically periodically/on change
 > Changes: Refactored the shared token-loading and env bootstrap into a reusable helper, added `npm run test:live:local` and `npm run test:live:all:local`, and tightened the existing live API test by removing a brittle final `headSha` assertion that did not reflect the real behavior contract.
 > Validation: Ran `npm run test:live:all:local` successfully, observing a full passing disposable-branch flow for both the shared GitHub API live test and the browser-driven UI live test.
 
+## [DONE 2026-06-30.5] Add file-tree search
+
+> Agent: Added a simple path-based search over the repository tree so larger TODO repositories remain navigable on mobile without relying on manual folder expansion.
+> Changes: Added `filterFileTree()` with focused unit coverage, introduced a search field in the files panel, automatically expanded matching branches while filtering, and surfaced an inline empty state when nothing matches.
+> Validation: Ran `npm test` successfully with the new tree-filter test and ran `npm run build` successfully after wiring the search UI into `App.tsx` and styles.
+
 # Notes
 
 ## UI prompt

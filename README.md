@@ -46,7 +46,7 @@ Everything else in the product follows from that: tree view, editor, sync to Git
 
 ## Product goals
 
-- Browse all TODO files and directories.
+- Browse and filter TODO files and directories.
 - Open and edit text files.
 - Create, rename, move, and delete files or folders.
 - Publish each change to the repository immediately.

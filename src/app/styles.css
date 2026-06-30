@@ -223,6 +223,10 @@ button {
   padding: 1rem;
 }
 
+.empty-state-inline {
+  margin-top: 0.5rem;
+}
+
 .stack-gap {
   display: flex;
   flex-direction: column;
