@@ -19,19 +19,70 @@ const commandLineTools = {
 };
 
 function run(command, args, options = {}) {
+  const shouldCapture = Boolean(options.captureOutput);
   const result = spawnSync(command, args, {
     cwd: options.cwd || projectRoot,
     env: options.env || process.env,
+    encoding: 'utf8',
     input: options.input,
-    stdio: options.input ? ['pipe', 'inherit', 'inherit'] : 'inherit'
+    stdio: shouldCapture
+      ? ['pipe', 'pipe', 'pipe']
+      : options.input
+        ? ['pipe', 'inherit', 'inherit']
+        : 'inherit'
   });
 
   if (result.error) {
     throw result.error;
   }
   if (result.status !== 0) {
-    throw new Error(`${command} exited with status ${result.status}`);
+    const failureMessage = options.failureMessage
+      ? options.failureMessage(result)
+      : `${command} exited with status ${result.status}`;
+    throw new Error(failureMessage);
   }
+
+  if (shouldCapture) {
+    if (result.stdout) {
+      process.stdout.write(result.stdout);
+    }
+    if (result.stderr) {
+      process.stderr.write(result.stderr);
+    }
+  }
+
+  return result;
+}
+
+function indent(text, prefix) {
+  return text
+    .split('\n')
+    .map((line) => `${prefix}${line}`)
+    .join('\n');
+}
+
+function formatAdbInstallFailure(result, apk) {
+  const output = [result.stdout, result.stderr].filter(Boolean).join('').trim();
+  if (!/insufficient permissions for device|missing udev rules/i.test(output)) {
+    return `${join(sdkRoot, 'platform-tools', 'adb')} exited with status ${result.status}`;
+  }
+
+  return [
+    'ADB reached the phone, but the current Linux user does not have USB access to it.',
+    'Add a udev rule for the phone vendor, reload udev, reconnect the device, and accept the USB debugging prompt again.',
+    '',
+    '1. Find the vendor ID with: lsusb',
+    '2. Create /etc/udev/rules.d/51-android.rules with a line like:',
+    '   SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", MODE="0666", GROUP="plugdev", TAG+="uaccess"',
+    '   Replace 18d1 with your phone vendor ID from lsusb.',
+    '3. Reload rules: sudo udevadm control --reload-rules && sudo udevadm trigger',
+    '4. Reconnect the phone and run: adb devices',
+    '5. If you prefer not to use adb, copy the APK to the phone and install it manually:',
+    `   ${apk}`,
+    '',
+    'Original adb output:',
+    indent(output, '  ')
+  ].join('\n');
 }
 
 function javaMajor() {
@@ -133,7 +184,9 @@ async function main() {
 
   if (shouldInstall) {
     run(join(sdkRoot, 'platform-tools', 'adb'), ['install', '-r', apk], {
-      env: androidEnv
+      env: androidEnv,
+      captureOutput: true,
+      failureMessage: (result) => formatAdbInstallFailure(result, apk)
     });
   }
 }

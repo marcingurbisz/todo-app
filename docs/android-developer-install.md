@@ -54,6 +54,49 @@ npm run android:install
 The install command rebuilds the current app, invokes `adb install -r`, and
 preserves app data when replacing an earlier debug build.
 
+## Linux USB permissions
+
+If `npm run android:install` ends with `adb: insufficient permissions for device`,
+the APK build already succeeded and only the USB install step failed.
+
+1. Check that the phone is visible:
+
+```bash
+lsusb
+```
+
+2. Create a udev rule for the phone vendor under
+`/etc/udev/rules.d/51-android.rules`, for example:
+
+```text
+SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+```
+
+Replace `18d1` with the vendor ID reported by `lsusb` for your device.
+
+3. Reload udev and reconnect the phone:
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+4. Accept the USB debugging prompt on the phone and confirm the device is ready:
+
+```bash
+adb devices
+```
+
+5. Retry:
+
+```bash
+npm run android:install
+```
+
+If you do not want to use `adb`, you can also copy
+`android/app/build/outputs/apk/debug/app-debug.apk` to the phone and open it
+there to install manually.
+
 ## Android Studio alternative
 
 After `npm run android:sync`, open the generated Android project:
