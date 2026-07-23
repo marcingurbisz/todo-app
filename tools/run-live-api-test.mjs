@@ -1,3 +1,3 @@
-import { runNpmScript } from "./live-test-env.mjs";
+import { runLiveTestTool } from "./live-test-env.mjs";
 
-await runNpmScript("test:live");
+await runLiveTestTool("vitest", ["run", "src/app/lib/github.live.test.ts"]);

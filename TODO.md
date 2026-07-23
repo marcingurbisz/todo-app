@@ -112,11 +112,16 @@ MG: Feedback:
 > Changes: Refactored the shared token-loading and env bootstrap into a reusable helper, added `npm run test:live:local` and `npm run test:live:all:local`, and tightened the existing live API test by removing a brittle final `headSha` assertion that did not reflect the real behavior contract.
 > Validation: Ran `npm run test:live:all:local` successfully, observing a full passing disposable-branch flow for both the shared GitHub API live test and the browser-driven UI live test.
 
-## [NEW] What's the difference between 
+## [DONE 2026-07-23.1] What's the difference between
 * npm run test:live
 * npm run test:ui:live:local
 * npm run test:live:all:local
 I find this measleading. What "local" means in run name?
+
+> Agent: Agreed that `local` was misleading: all variants execute on the current machine and all mutate real disposable branches in `todo-app-test`. The suffix only meant that a wrapper populated the live-test environment and read the PAT from ignored `secrets.md`.
+> Changes: Replaced the five overlapping names with three commands: `npm run test:live` runs API then UI, `npm run test:live:api` runs only the shared GitHub-client flow, and `npm run test:live:ui` runs only the Playwright UI flow. Every command now prefers `TODO_APP_TEST_TOKEN`, falls back to `secrets.md`, and enables the live-test opt-in automatically. Updated README guidance and removed duplicated stale launcher code that caused the UI test to run twice.
+> Validation: Ran syntax checks, `npm test`, `npm run build`, the focused `npm run test:live:ui`, and the final combined `npm run test:live`. The final real-repository run passed both create/edit/move/delete flows on disposable branches. The environment initially lacked the Playwright browser and Linux libraries; installed them with the documented `npx playwright install --with-deps chromium` setup command.
+> Learning: `live` describes the remote side effect (a real GitHub repository), while `api` and `ui` describe the exercised layer. Where the runner process happens to execute is not a useful naming dimension here.
 
 ## [DONE 2026-06-30.5] Add file-tree search
 

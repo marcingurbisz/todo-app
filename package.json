@@ -12,11 +12,9 @@
     "android:open": "npx cap open android",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:live": "vitest run src/app/lib/github.live.test.ts",
-    "test:live:local": "node ./tools/run-live-api-test.mjs",
-    "test:ui:live": "playwright test e2e/live-ui.spec.ts",
-    "test:ui:live:local": "node ./tools/run-live-ui-test.mjs",
-    "test:live:all:local": "node ./tools/run-all-live-tests.mjs"
+    "test:live": "node ./tools/run-all-live-tests.mjs",
+    "test:live:api": "node ./tools/run-live-api-test.mjs",
+    "test:live:ui": "node ./tools/run-live-ui-test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-export function readTokenFromSecrets() {
+function readTokenFromSecrets() {
   const content = readFileSync(new URL("../secrets.md", import.meta.url), "utf8");
   const match = content.match(/github_pat_[A-Za-z0-9_]+/);
 
@@ -12,7 +14,7 @@ export function readTokenFromSecrets() {
   return match[0];
 }
 
-export function createLiveTestEnv() {
+function createLiveTestEnv() {
   return {
     ...process.env,
     TODO_APP_LIVE_E2E: process.env.TODO_APP_LIVE_E2E || "1",
@@ -20,9 +22,15 @@ export function createLiveTestEnv() {
   };
 }
 
-export function runNpmScript(scriptName) {
+export function runLiveTestTool(toolName, args) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ["run", scriptName], {
+    const executable = join(
+      fileURLToPath(new URL("..", import.meta.url)),
+      "node_modules",
+      ".bin",
+      process.platform === "win32" ? `${toolName}.cmd` : toolName,
+    );
+    const child = spawn(executable, args, {
       stdio: "inherit",
       env: createLiveTestEnv(),
     });
@@ -39,7 +47,7 @@ export function runNpmScript(scriptName) {
         return;
       }
 
-      reject(new Error(`${scriptName} exited with code ${code ?? 1}.`));
+      reject(new Error(`${toolName} exited with code ${code ?? 1}.`));
     });
   });
 }

@@ -117,14 +117,26 @@ npm run build
 npm test
 ```
 
-Opt-in scripted live repository automation:
+Opt-in scripted tests against the real `todo-app-test` repository:
 
 ```bash
-TODO_APP_LIVE_E2E=1 TODO_APP_TEST_TOKEN=... npm run test:live
-npm run test:live:local
-npm run test:ui:live:local
-npm run test:live:all:local
+npx playwright install --with-deps chromium # once per environment for UI tests
+npm run test:live
+npm run test:live:api
+npm run test:live:ui
 ```
+
+- `test:live` runs both the GitHub API flow and the browser UI flow.
+- `test:live:api` runs create, edit, move, and delete through the shared GitHub
+  client without opening the app UI.
+- `test:live:ui` runs the same repository workflow through the browser UI with
+  Playwright.
+
+`live` means that these tests mutate real disposable branches in
+`todo-app-test`; it does not mean that the runner is remote. All three commands
+run on the current machine. They use `TODO_APP_TEST_TOKEN` when it is set,
+otherwise they read the PAT from the ignored local `secrets.md`. They enable
+`TODO_APP_LIVE_E2E=1` automatically.
 
 ## Verification strategy
 
