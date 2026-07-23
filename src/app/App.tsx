@@ -15,6 +15,10 @@ const DEFAULT_SETTINGS: RepoSettings = {
 
 type PaneName = "files" | "editor";
 type EditorMode = "preview" | "raw";
+type ActionSheet =
+  | { type: "move"; path: string }
+  | { type: "directory"; path: string }
+  | null;
 
 const MOVE_SUGGESTIONS: Record<string, string[]> = {
   "__today": ["__today/tomorrow", "_short-term", "__now"],
@@ -76,6 +80,22 @@ function listDirectoryPaths(nodes: FileTreeNode[]): string[] {
   return directories;
 }
 
+function findDirectory(nodes: FileTreeNode[], path: string): FileTreeNode | null {
+  for (const node of nodes) {
+    if (node.kind !== "directory") {
+      continue;
+    }
+    if (node.path === path) {
+      return node;
+    }
+    const nested = findDirectory(node.children, path);
+    if (nested) {
+      return nested;
+    }
+  }
+  return null;
+}
+
 function getMoveSuggestions(path: string): string[] {
   const parentDirectory = getParentDirectory(path);
   return MOVE_SUGGESTIONS[parentDirectory] ?? [];
@@ -89,6 +109,27 @@ function countFiles(nodes: FileTreeNode[]): number {
 
     return total + countFiles(node.children);
   }, 0);
+}
+
+function immediateFileCount(node: FileTreeNode): number {
+  return node.children.filter((child) => child.kind === "file").length;
+}
+
+function Icon({ name, size = 18 }: { name: "back" | "chevron" | "delete" | "file" | "folder" | "gear" | "move" | "plus" | "search" | "sync"; size?: number }) {
+  const paths = {
+    back: <polyline points="15 18 9 12 15 6" />,
+    chevron: <polyline points="9 18 15 12 9 6" />,
+    delete: <><polyline points="3 6 5 6 21 6" /><path d="M19 6l-2 14H7L5 6M10 11v6M14 11v6" /></>,
+    file: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><polyline points="14 3 14 8 19 8" /></>,
+    folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+    gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33A1.65 1.65 0 0 0 14 20.83V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3.09 14H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.92a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.2l.06.06a1.65 1.65 0 0 0 1.82.33H9A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1.08 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9A1.65 1.65 0 0 0 20.91 10H21a2 2 0 0 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z" /></>,
+    move: <path d="M5 9l-3 3 3 3M2 12h13M19 5v14" />,
+    plus: <path d="M12 5v14M5 12h14" />,
+    search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+    sync: <><path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4" /><path d="M12 3v13m0 0-4-4m4 4 4-4" /></>,
+  };
+
+  return <svg aria-hidden="true" height={size} viewBox="0 0 24 24" width={size} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">{paths[name]}</svg>;
 }
 
 function readStoredSettings(): RepoSettings {
@@ -138,26 +179,30 @@ interface TreeItemProps {
   selectedPath: string;
   onToggleDirectory: (path: string) => void;
   onSelectFile: (path: string) => void;
+  onDirectoryMenu: (path: string) => void;
+  onFileMenu: (path: string) => void;
 }
 
 function TreeItem(props: TreeItemProps) {
-  const { depth, expandedPaths, node, onSelectFile, onToggleDirectory, selectedPath } = props;
+  const { depth, expandedPaths, node, onDirectoryMenu, onFileMenu, onSelectFile, onToggleDirectory, selectedPath } = props;
 
   if (node.kind === "directory") {
     const isExpanded = expandedPaths.includes(node.path);
 
     return (
       <li>
-        <button
+        <div
           className="tree-row tree-row-directory"
-          style={{ paddingLeft: `${depth * 0.9 + 0.75}rem` }}
-          type="button"
-          onClick={() => onToggleDirectory(node.path)}
+          style={{ paddingLeft: `${12 + depth * 16}px` }}
         >
-          <span className="tree-symbol">{isExpanded ? "−" : "+"}</span>
+          <button className="tree-row-main" type="button" onClick={() => onToggleDirectory(node.path)}>
+          <span className={`tree-chevron${isExpanded ? " tree-chevron-open" : ""}`}><Icon name="chevron" size={10} /></span>
+          <span className="tree-icon"><Icon name="folder" size={16} /></span>
           <span className="tree-label">{node.name}</span>
-          <span className={badgeClassName(node.name)}>{node.name}</span>
-        </button>
+          </button>
+          <span className={badgeClassName(node.name)}>{node.children.length === 0 ? "empty" : node.children.length}</span>
+          <button aria-label={`Actions for directory ${node.path}`} className="icon-button node-menu" type="button" onClick={() => onDirectoryMenu(node.path)}>•••</button>
+        </div>
         {isExpanded ? (
           <ul className="tree-list">
             {node.children.map((child) => (
@@ -166,6 +211,8 @@ function TreeItem(props: TreeItemProps) {
                 depth={depth + 1}
                 expandedPaths={expandedPaths}
                 node={child}
+                onDirectoryMenu={onDirectoryMenu}
+                onFileMenu={onFileMenu}
                 onSelectFile={onSelectFile}
                 onToggleDirectory={onToggleDirectory}
                 selectedPath={selectedPath}
@@ -179,15 +226,16 @@ function TreeItem(props: TreeItemProps) {
 
   return (
     <li>
-      <button
+      <div
         className={`tree-row tree-row-file${selectedPath === node.path ? " tree-row-active" : ""}`}
-        style={{ paddingLeft: `${depth * 0.9 + 0.75}rem` }}
-        type="button"
-        onClick={() => onSelectFile(node.path)}
+        style={{ paddingLeft: `${26 + depth * 16}px` }}
       >
-        <span className="tree-symbol">•</span>
+        <button className="tree-row-main" type="button" onClick={() => onSelectFile(node.path)}>
+        <span className="tree-icon"><Icon name="file" size={16} /></span>
         <span className="tree-label">{displayName(node.name)}</span>
-      </button>
+        </button>
+        <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" type="button" onClick={() => onFileMenu(node.path)}>•••</button>
+      </div>
     </li>
   );
 }
@@ -201,7 +249,6 @@ export function App() {
   const [selectedPath, setSelectedPath] = useState("");
   const [fileContent, setFileContent] = useState("");
   const [savedContent, setSavedContent] = useState("");
-  const [targetPath, setTargetPath] = useState("");
   const [activePane, setActivePane] = useState<PaneName>("files");
   const [editorMode, setEditorMode] = useState<EditorMode>("preview");
   const [status, setStatus] = useState("Complete setup to connect your private TODO repository.");
@@ -214,6 +261,10 @@ export function App() {
   const [createFileContent, setCreateFileContent] = useState("");
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [actionSheet, setActionSheet] = useState<ActionSheet>(null);
+  const [deletePath, setDeletePath] = useState("");
+  const [toast, setToast] = useState("");
 
   const hasUnsavedChanges = selectedPath !== "" && fileContent !== savedContent;
   const isConfigured = hasConfiguredSettings(settings);
@@ -226,7 +277,6 @@ export function App() {
 
     return listDirectoryPaths(snapshot.tree);
   }, [snapshot]);
-  const moveSuggestions = useMemo(() => getMoveSuggestions(selectedPath), [selectedPath]);
   const filteredTree = useMemo(() => filterFileTree(snapshot?.tree ?? [], searchQuery), [searchQuery, snapshot]);
   const visibleFileCount = useMemo(() => countFiles(filteredTree), [filteredTree]);
   const effectiveExpandedPaths = useMemo(
@@ -241,6 +291,15 @@ export function App() {
 
     void syncRepository(initialSettings);
   }, [initialSettings]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setToast(""), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   async function syncRepository(nextSettings = settings) {
     setIsBusy(true);
@@ -260,7 +319,6 @@ export function App() {
 
       if (selectedPath && !nextSnapshot.files.some((entry) => entry.path === selectedPath)) {
         setSelectedPath("");
-        setTargetPath("");
         setFileContent("");
         setSavedContent("");
       }
@@ -287,7 +345,6 @@ export function App() {
     try {
       const content = await readFileContent(settings, path);
       setSelectedPath(path);
-      setTargetPath(path);
       setFileContent(content);
       setSavedContent(content);
       setEditorMode("preview");
@@ -311,7 +368,6 @@ export function App() {
 
     if (!nextSelectedPath) {
       setSelectedPath("");
-      setTargetPath("");
       setFileContent("");
       setSavedContent("");
       return nextSnapshot;
@@ -319,7 +375,6 @@ export function App() {
 
     const content = await readFileContent(settings, nextSelectedPath);
     setSelectedPath(nextSelectedPath);
-    setTargetPath(nextSelectedPath);
     setFileContent(content);
     setSavedContent(content);
     setEditorMode("preview");
@@ -347,6 +402,7 @@ export function App() {
 
       const nextSnapshot = await reloadSnapshotWithSelection(nextSelectedPath);
       setStatus(`Published successfully. New HEAD ${headLabel(nextSnapshot)}.`);
+      setToast(`${message} · published`);
       return true;
     } catch (nextError) {
       setError(errorMessage(nextError));
@@ -427,32 +483,84 @@ export function App() {
     await publishChanges(`Edit ${selectedPath}`, [{ path: selectedPath, content: fileContent }], selectedPath);
   }
 
-  async function handleMoveFile() {
+  async function handleMoveToDirectory(destination: string) {
     if (!selectedPath) {
-      setError("Select a file before moving it.");
       return;
     }
 
-    const normalizedPath = normalizePath(targetPath);
-
-    if (!normalizedPath) {
-      setError("Enter the destination path.");
-      return;
-    }
-
-    if (normalizedPath === selectedPath) {
-      await handleSaveFile();
-      return;
-    }
-
-    await publishChanges(
-      `Move ${selectedPath} to ${normalizedPath}`,
+    const fileName = selectedPath.split("/").at(-1) ?? selectedPath;
+    const nextPath = normalizePath(`${destination}/${fileName}`);
+    const moved = await publishChanges(
+      `Move ${selectedPath} to ${nextPath}`,
       [
         { path: selectedPath, delete: true },
-        { path: normalizedPath, content: fileContent },
+        { path: nextPath, content: fileContent },
       ],
-      normalizedPath,
+      nextPath,
     );
+
+    if (moved) {
+      setActionSheet(null);
+      setActivePane("files");
+    }
+  }
+
+  async function openFileMoveSheet(path: string) {
+    setIsBusy(true);
+    setError("");
+    try {
+      const content = await readFileContent(settings, path);
+      setSelectedPath(path);
+      setFileContent(content);
+      setSavedContent(content);
+      setActionSheet({ type: "move", path });
+    } catch (nextError) {
+      setError(errorMessage(nextError));
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleMoveFilesUp(directoryPath: string) {
+    if (!snapshot) {
+      return;
+    }
+
+    const parent = getParentDirectory(directoryPath);
+    const entries = snapshot.files.filter(
+      (entry) => getParentDirectory(entry.path) === directoryPath,
+    );
+
+    if (!parent || entries.length === 0) {
+      return;
+    }
+
+    setIsBusy(true);
+    setError("");
+    try {
+      const contents = await Promise.all(
+        entries.map((entry) => readFileContent(settings, entry.path)),
+      );
+      const changes = entries.flatMap((entry, index) => {
+        const fileName = entry.path.split("/").at(-1) ?? entry.path;
+        return [
+          { path: entry.path, delete: true as const },
+          { path: `${parent}/${fileName}`, content: contents[index] },
+        ];
+      });
+      setIsBusy(false);
+      const moved = await publishChanges(
+        `Move ${entries.length} files from ${directoryPath} to ${parent}`,
+        changes,
+        null,
+      );
+      if (moved) {
+        setActionSheet(null);
+      }
+    } catch (nextError) {
+      setError(errorMessage(nextError));
+      setIsBusy(false);
+    }
   }
 
   async function handleDeleteFile() {
@@ -461,11 +569,9 @@ export function App() {
       return;
     }
 
-    if (!window.confirm(`Delete ${selectedPath}?`)) {
-      return;
-    }
-
     await publishChanges(`Delete ${selectedPath}`, [{ path: selectedPath, delete: true }], null);
+    setDeletePath("");
+    setActivePane("files");
   }
 
   function updateDraftSetting(field: keyof RepoSettings, value: string) {
@@ -491,352 +597,160 @@ export function App() {
     setShowSettings(false);
   }
 
-  function openCreateDialog() {
-    const suggestedDirectory = getParentDirectory(selectedPath) || directoryOptions[0] || "__today";
+  function openCreateDialog(directory?: string) {
+    const suggestedDirectory = directory || getParentDirectory(selectedPath) || directoryOptions[0] || "__today";
     setCreateFileDirectory(suggestedDirectory);
     setCreateFileName("new-note.md");
     setCreateFileContent("");
+    setActionSheet(null);
     setShowCreateDialog(true);
   }
 
-  if (isFirstRun) {
-    return (
-      <div className="app-shell app-shell-onboarding">
-        <section className="onboarding-card">
-          <div className="onboarding-copy stack-gap">
-            <div>
-              <p className="eyebrow">First-run setup</p>
-              <h1>Connect your private TODO repository</h1>
-            </div>
-            <p className="hero-copy">
-              Enter the repository coordinates and a fine-grained GitHub token once. After setup, the app starts on the file tree and settings remain available from the main screen.
-            </p>
-            <div className="onboarding-points">
-              <div className="status-pill">
-                <span>Primary workflow</span>
-                <strong>Move notes between high-traffic folders fast</strong>
-              </div>
-              <div className="status-pill">
-                <span>Editing model</span>
-                <strong>Open, edit, move, and publish every change</strong>
-              </div>
-              <div className="status-pill">
-                <span>Security note</span>
-                <strong>Use a repo-scoped fine-grained token</strong>
-              </div>
-            </div>
-          </div>
-
-          <form className="settings-form onboarding-form" onSubmit={(event) => void handleSettingsSubmit(event)}>
-            <label className="field-group">
-              <span>Owner</span>
-              <input value={settingsDraft.owner} onChange={(event) => updateDraftSetting("owner", event.target.value)} placeholder="marcingurbisz" type="text" />
-            </label>
-            <label className="field-group">
-              <span>Repository</span>
-              <input value={settingsDraft.repo} onChange={(event) => updateDraftSetting("repo", event.target.value)} placeholder="todo" type="text" />
-            </label>
-            <label className="field-group">
-              <span>Branch</span>
-              <input value={settingsDraft.branch} onChange={(event) => updateDraftSetting("branch", event.target.value)} placeholder="main" type="text" />
-            </label>
-            <label className="field-group">
-              <span>GitHub token</span>
-              <input value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token with contents access" type="password" />
-            </label>
-            <button className="primary-button" disabled={isBusy} type="submit">
-              Save setup and load repository
-            </button>
-          </form>
-        </section>
-
-        <aside className="feedback-strip">
-          <div>
-            <strong>Status:</strong> {status}
-          </div>
-          {error ? (
-            <div className="feedback-error">
-              <strong>Error:</strong> {error}
-            </div>
-          ) : null}
-        </aside>
-      </div>
-    );
-  }
+  const selectedDirectory = getParentDirectory(selectedPath);
+  const suggestedDestinations = getMoveSuggestions(selectedPath).filter((path) => path !== selectedDirectory);
+  const otherDestinations = directoryOptions.filter(
+    (path) => path !== selectedDirectory && !suggestedDestinations.includes(path),
+  );
+  const actionDirectory =
+    actionSheet?.type === "directory" ? findDirectory(snapshot?.tree ?? [], actionSheet.path) : null;
+  const actionDirectoryFileCount = actionDirectory ? immediateFileCount(actionDirectory) : 0;
 
   return (
-    <div className="app-shell">
-      <header className="hero-card">
-        <div>
-          <p className="eyebrow">Android-first GitHub TODO client</p>
-          <h1>todo-app</h1>
-          <p className="hero-copy">
-            Browse the private TODO repository, edit files, move them across folders, and publish each action as a git commit.
-          </p>
-        </div>
-        <div className="hero-side">
-          <div className="status-cluster">
-            <div className="status-pill">
-              <span>Repo</span>
-              <strong>
-                {settings.owner}/{settings.repo}
-              </strong>
+    <div className="prototype-stage">
+      <main className="device">
+        {!showSettings && activePane === "files" ? (
+          <header className="appbar">
+            <h1 className="appbar-title"><Icon name="sync" /><span>todo</span></h1>
+            <div className="appbar-actions">
+              <span className={`sync-chip${isBusy ? " syncing" : ""}`}><span className="sync-dot" />{isBusy ? "publishing…" : "synced"}</span>
+              <button aria-label="Search" className="icon-button" type="button" onClick={() => setShowSearch((current) => !current)}><Icon name="search" /></button>
+              <button aria-label="Settings" className="icon-button" type="button" onClick={openSettings}><Icon name="gear" /></button>
             </div>
-            <div className="status-pill">
-              <span>Branch</span>
-              <strong>{settings.branch}</strong>
-            </div>
-            <div className="status-pill">
-              <span>HEAD</span>
-              <strong>{headLabel(snapshot)}</strong>
-            </div>
-          </div>
-          <div className="hero-actions">
-            <button className="secondary-button" disabled={isBusy} type="button" onClick={() => void syncRepository()}>
-              Refresh
-            </button>
-            <button className="ghost-button" type="button" onClick={openSettings}>
-              Open settings
-            </button>
-          </div>
-        </div>
-      </header>
+          </header>
+        ) : null}
 
-      <nav className="pane-tabs" aria-label="Panels">
-        <button className={activePane === "files" ? "pane-tab pane-tab-active" : "pane-tab"} type="button" onClick={() => setActivePane("files")}>Files</button>
-        <button className={activePane === "editor" ? "pane-tab pane-tab-active" : "pane-tab"} type="button" onClick={() => setActivePane("editor")}>Editor</button>
-      </nav>
-
-      <main className={`workspace-grid${showSettings ? " workspace-grid-with-settings" : ""}`}>
-        <section className={`panel panel-files${activePane === "files" ? " panel-mobile-active" : ""}`}>
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Repository tree</p>
-              <h2>
-                {snapshot
-                  ? `${visibleFileCount} ${searchQuery.trim() ? "matching files" : "files"}`
-                  : "No repository loaded"}
-              </h2>
-            </div>
-          </div>
-
-          <div className="panel-body">
-            {snapshot ? (
-              <>
-                <label className="field-group">
-                  <span>Search paths</span>
-                  <input
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="__today, review, publish..."
-                    type="search"
-                  />
-                </label>
-
-                <ul className="tree-list">
-                  {filteredTree.map((node) => (
-                  <TreeItem
-                    key={node.path}
-                    depth={0}
-                    expandedPaths={effectiveExpandedPaths}
-                    node={node}
-                    onSelectFile={(path) => void loadSelectedFile(path)}
-                    onToggleDirectory={toggleDirectory}
-                    selectedPath={selectedPath}
-                  />
-                  ))}
-                </ul>
-
-                {filteredTree.length === 0 ? (
-                  <div className="empty-state empty-state-inline">
-                    <h3>No matching files</h3>
-                    <p>Try another path fragment or clear the search field.</p>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="empty-state">
-                <h3>Connect the repository</h3>
-                <p>Enter a GitHub token in Settings, then load the private `todo` repository.</p>
+        <section className="screen">
+          {showSettings ? (
+            <form className="settings-screen" aria-label="Settings" onSubmit={(event) => void handleSettingsSubmit(event)}>
+              <div className="settings-head">
+                {!isFirstRun ? <button aria-label="Back" className="icon-button" type="button" onClick={closeSettings}><Icon name="back" /></button> : null}
+                <h1>Settings</h1>
               </div>
-            )}
-          </div>
-
-          <div className="panel-footer stack-gap">
-            <div className="footer-note">
-              Mutations use GitHub fast-forward ref updates, so concurrent changes are rejected instead of silently overwritten.
-            </div>
-            <div className="footer-note">Use file movement as the main status change, then delete the file when the task is done.</div>
-          </div>
-        </section>
-
-        <section className={`panel panel-editor${activePane === "editor" ? " panel-mobile-active" : ""}`}>
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Editor</p>
-              <h2>{selectedPath || "Select a file"}</h2>
-            </div>
-            <div className="action-row">
-              <button className="primary-button" disabled={isBusy || !selectedPath || !hasUnsavedChanges} type="button" onClick={() => void handleSaveFile()}>
-                Save commit
-              </button>
-              <button className="danger-button" disabled={isBusy || !selectedPath} type="button" onClick={() => void handleDeleteFile()}>
-                Delete
-              </button>
-            </div>
-          </div>
-
-          <div className="panel-body stack-gap">
-            <div className="mode-toggle" aria-label="Editor mode">
-              <button className={editorMode === "preview" ? "mode-button mode-button-active" : "mode-button"} type="button" onClick={() => setEditorMode("preview")}>
-                Preview
-              </button>
-              <button className={editorMode === "raw" ? "mode-button mode-button-active" : "mode-button"} type="button" onClick={() => setEditorMode("raw")}>
-                Raw
-              </button>
-            </div>
-            <label className="field-group">
-              <span>Move or rename path</span>
-              <input value={targetPath} onChange={(event) => setTargetPath(event.target.value)} placeholder="inbox/today/note.md" type="text" />
-            </label>
-            {moveSuggestions.length > 0 ? (
-              <div className="suggestions-block">
-                <span className="suggestions-label">Suggested destinations</span>
-                <div className="suggestions-row">
-                  {moveSuggestions.map((path) => (
-                    <button key={path} className="suggestion-chip" type="button" onClick={() => setTargetPath(path)}>
-                      {path}
-                    </button>
-                  ))}
+              <div className="settings-area">
+                {isFirstRun ? <p className="settings-intro">Connect your private GitHub TODO repository.</p> : null}
+                <label className="setting-group"><span className="setting-label">Owner</span><input className="setting-input" value={settingsDraft.owner} onChange={(event) => updateDraftSetting("owner", event.target.value)} placeholder="marcingurbisz" type="text" /></label>
+                <label className="setting-group"><span className="setting-label">Repository</span><input className="setting-input" value={settingsDraft.repo} onChange={(event) => updateDraftSetting("repo", event.target.value)} placeholder="todo" type="text" /></label>
+                <label className="setting-group"><span className="setting-label">Branch</span><input className="setting-input" value={settingsDraft.branch} onChange={(event) => updateDraftSetting("branch", event.target.value)} placeholder="main" type="text" /></label>
+                <label className="setting-group"><span className="setting-label">GitHub token</span><input className="setting-input" value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token" type="password" /></label>
+                <p className="setting-hint">Fine-grained PAT with contents read/write access to this repository only.</p>
+                <div className="setting-group">
+                  <span className="setting-label">Sync</span>
+                  <div className="settings-inline-actions">
+                    <button className="action-button" disabled={isBusy} type="button" onClick={() => void syncRepository(settingsDraft)}>Test connection</button>
+                    <button className="action-button" disabled={isBusy || isFirstRun} type="button" onClick={() => void syncRepository()}>Pull now</button>
+                  </div>
+                  <p className="setting-hint">Last pull: {lastSyncAt ?? "not synced in this session"}{snapshot ? ` · ${snapshot.files.length} files` : ""}</p>
                 </div>
               </div>
-            ) : null}
-            <button className="secondary-button" disabled={isBusy || !selectedPath} type="button" onClick={() => void handleMoveFile()}>
-              Move or rename with commit
-            </button>
-
-            {editorMode === "preview" ? (
-              <button aria-label="Markdown preview" className="markdown-preview" type="button" onClick={() => setEditorMode("raw")}>
-                <div className="markdown-preview-rendered" dangerouslySetInnerHTML={{ __html: previewHtml || "<p>Select a file to preview.</p>" }} />
-                <div className="markdown-preview-hint">Tap the preview to switch to raw editing.</div>
-              </button>
-            ) : (
-              <label className="field-group field-group-editor">
-                <span>File contents</span>
-                <textarea value={fileContent} onChange={(event) => setFileContent(event.target.value)} placeholder="Select a file to edit" />
-              </label>
-            )}
-          </div>
-        </section>
-      </main>
-
-      <button aria-label="Create file" className="floating-create-button" type="button" onClick={openCreateDialog}>
-        +
-      </button>
-
-      {showSettings ? (
-        <section className="settings-overlay" aria-label="Settings">
-          <div className="settings-screen">
-            <div className="settings-screen-header">
-              <div>
-                <p className="eyebrow">Settings</p>
-                <h2>GitHub access</h2>
+              <div className="action-bar">
+                {!isFirstRun ? <button className="action-button" type="button" onClick={closeSettings}>Cancel</button> : null}
+                <button aria-label={isFirstRun ? "Save setup and load repository" : "Save settings"} className="action-button primary" disabled={isBusy} type="submit">Save</button>
               </div>
-              <button className="ghost-button" type="button" onClick={closeSettings}>
-                Cancel
-              </button>
-            </div>
-
-            <form className="settings-form settings-screen-form" onSubmit={(event) => void handleSettingsSubmit(event)}>
-              <label className="field-group">
-                <span>Owner</span>
-                <input value={settingsDraft.owner} onChange={(event) => updateDraftSetting("owner", event.target.value)} type="text" />
-              </label>
-              <label className="field-group">
-                <span>Repository</span>
-                <input value={settingsDraft.repo} onChange={(event) => updateDraftSetting("repo", event.target.value)} type="text" />
-              </label>
-              <label className="field-group">
-                <span>Branch</span>
-                <input value={settingsDraft.branch} onChange={(event) => updateDraftSetting("branch", event.target.value)} type="text" />
-              </label>
-              <label className="field-group">
-                <span>GitHub token</span>
-                <input value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token with contents access" type="password" />
-              </label>
-
-              <div className="settings-inline-actions">
-                <button className="secondary-button" disabled={isBusy} type="button" onClick={() => void syncRepository(settingsDraft)}>
-                  Test connection
-                </button>
-                <button className="ghost-button" disabled={isBusy} type="button" onClick={() => void syncRepository()}>
-                  Pull now
-                </button>
-              </div>
-
-              <div className="footer-note">
-                Last pull: {lastSyncAt ?? "not synced in this session"}
-              </div>
-
-              <button className="primary-button" disabled={isBusy} type="submit">
-                Save settings
-              </button>
             </form>
-          </div>
+          ) : activePane === "editor" ? (
+            <section className="editor-screen">
+              <div className="editor-tools">
+                <button aria-label="Back" className="icon-button" type="button" onClick={() => setActivePane("files")}><Icon name="back" /></button>
+                <div className="editor-title">
+                  <h1>{displayName(selectedPath)}</h1>
+                  <div>{selectedDirectory || "/"}/</div>
+                  <h2 className="sr-only">{selectedPath || "Select a file"}</h2>
+                </div>
+                <div className="mode-toggle" aria-label="Editor mode">
+                  <button className={editorMode === "preview" ? "mode-button active" : "mode-button"} type="button" onClick={() => setEditorMode("preview")}>Preview</button>
+                  <button className={editorMode === "raw" ? "mode-button active" : "mode-button"} type="button" onClick={() => setEditorMode("raw")}>Raw</button>
+                </div>
+              </div>
+              <div className="editor-area">
+                {editorMode === "preview" ? (
+                  <button aria-label="Markdown preview" className="markdown-preview" type="button" onClick={() => setEditorMode("raw")}>
+                    <div className="markdown-preview-rendered" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                    <div className="markdown-preview-hint">Tap preview to edit in raw mode</div>
+                  </button>
+                ) : (
+                  <label className="raw-editor"><span className="sr-only">File contents</span><textarea value={fileContent} onChange={(event) => setFileContent(event.target.value)} /></label>
+                )}
+              </div>
+              <div className="action-bar">
+                <button className="action-button" disabled={isBusy || !selectedPath} type="button" onClick={() => setActionSheet({ type: "move", path: selectedPath })}><Icon name="move" size={13} />Move</button>
+                <button className="action-button danger" disabled={isBusy || !selectedPath} type="button" onClick={() => setDeletePath(selectedPath)}><Icon name="delete" size={13} />Delete</button>
+                <button aria-label="Save commit" className="action-button primary" disabled={isBusy || !selectedPath} type="button" onClick={() => void handleSaveFile()}>Save</button>
+              </div>
+            </section>
+          ) : (
+            <section className="tree-screen">
+              <h2 className="sr-only">{snapshot ? `${visibleFileCount} files` : "No repository loaded"}</h2>
+              {showSearch ? <label className="search-bar"><Icon name="search" size={16} /><span className="sr-only">Search paths</span><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search paths…" type="search" /></label> : null}
+              <div className="tree-scroll">
+                {snapshot ? (
+                  <ul className="tree-list">
+                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} expandedPaths={effectiveExpandedPaths} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(path) => void openFileMoveSheet(path)} onSelectFile={(path) => void loadSelectedFile(path)} onToggleDirectory={toggleDirectory} selectedPath={selectedPath} />)}
+                  </ul>
+                ) : <div className="empty-state">Pulling repository…</div>}
+                {snapshot && filteredTree.length === 0 ? <div className="empty-state">No matching files</div> : null}
+              </div>
+              <button aria-label="Create file" className="floating-create-button" type="button" onClick={() => openCreateDialog()}><Icon name="plus" size={22} /></button>
+            </section>
+          )}
         </section>
-      ) : null}
 
-      {showCreateDialog ? (
-        <section className="dialog-overlay" aria-label="Create file dialog">
-          <div className="dialog-card stack-gap">
-            <div>
-              <p className="eyebrow">Quick create</p>
-              <h2>New file</h2>
-            </div>
-
-            <label className="field-group">
-              <span>Directory</span>
-              <select value={createFileDirectory} onChange={(event) => setCreateFileDirectory(event.target.value)}>
-                {directoryOptions.map((path) => (
-                  <option key={path} value={path}>
-                    {path}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field-group">
-              <span>File name</span>
-              <input value={createFileName} onChange={(event) => setCreateFileName(event.target.value)} placeholder="new-note.md" type="text" />
-            </label>
-
-            <label className="field-group field-group-editor field-group-editor-small">
-              <span>Initial content</span>
-              <textarea value={createFileContent} onChange={(event) => setCreateFileContent(event.target.value)} placeholder="Write the first note content" />
-            </label>
-
-            <div className="dialog-actions">
-              <button className="ghost-button" type="button" onClick={() => setShowCreateDialog(false)}>
-                Cancel
-              </button>
-              <button className="primary-button" disabled={isBusy || !settings.token} type="button" onClick={() => void handleCreateFile()}>
-                Create with commit
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <aside className="feedback-strip">
-        <div>
-          <strong>Status:</strong> {status}
-        </div>
-        {error ? (
-          <div className="feedback-error">
-            <strong>Error:</strong> {error}
+        {actionSheet?.type === "move" ? (
+          <div className="sheet-backdrop" role="presentation" onClick={() => setActionSheet(null)}>
+            <section aria-label="Move file" className="bottom-sheet" onClick={(event) => event.stopPropagation()}>
+              <div className="sheet-handle" />
+              <h2>Move {displayName(actionSheet.path)}</h2>
+              <p>from <code>{getParentDirectory(actionSheet.path)}/</code></p>
+              {suggestedDestinations.length > 0 ? <><div className="sheet-section">Suggested</div>{suggestedDestinations.map((path) => <button className="sheet-row suggested" key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span><small>suggested</small></button>)}<div className="sheet-section">All directories</div></> : null}
+              {otherDestinations.map((path) => <button className="sheet-row" key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span></button>)}
+            </section>
           </div>
         ) : null}
-      </aside>
+
+        {actionSheet?.type === "directory" ? (
+          <div className="sheet-backdrop" role="presentation" onClick={() => setActionSheet(null)}>
+            <section aria-label="Directory actions" className="bottom-sheet" onClick={(event) => event.stopPropagation()}>
+              <div className="sheet-handle" /><h2>{actionSheet.path.split("/").at(-1)}/</h2><p><code>{actionSheet.path}/</code></p>
+              <button className="sheet-row" type="button" onClick={() => openCreateDialog(actionSheet.path)}><Icon name="file" size={16} /><span>New file here</span></button>
+              {getParentDirectory(actionSheet.path) && actionDirectoryFileCount > 0 ? <button className="sheet-row" type="button" onClick={() => void handleMoveFilesUp(actionSheet.path)}><Icon name="move" size={16} /><span>Move all {actionDirectoryFileCount} files up to <code>{getParentDirectory(actionSheet.path)}/</code></span></button> : null}
+            </section>
+          </div>
+        ) : null}
+
+        {showCreateDialog ? (
+          <div className="dialog-backdrop" role="presentation" onClick={() => setShowCreateDialog(false)}>
+            <section aria-label="Create file dialog" className="dialog" onClick={(event) => event.stopPropagation()}>
+              <h2>New file</h2><p>Create a new markdown file in the selected directory. It publishes immediately.</p>
+              <label><span>File name</span><input autoFocus value={createFileName} onChange={(event) => setCreateFileName(event.target.value)} placeholder="new-note" type="text" /></label>
+              <label><span>Directory</span><select value={createFileDirectory} onChange={(event) => setCreateFileDirectory(event.target.value)}>{directoryOptions.map((path) => <option key={path} value={path}>{path}/</option>)}</select></label>
+              <div className="dialog-actions"><button className="dialog-button" type="button" onClick={() => setShowCreateDialog(false)}>Cancel</button><button aria-label="Create with commit" className="dialog-button primary" disabled={isBusy} type="button" onClick={() => void handleCreateFile()}>Create</button></div>
+            </section>
+          </div>
+        ) : null}
+
+        {deletePath ? (
+          <div className="dialog-backdrop" role="presentation" onClick={() => setDeletePath("")}>
+            <section aria-label="Delete file dialog" className="dialog" onClick={(event) => event.stopPropagation()}>
+              <h2>Delete {displayName(deletePath)}?</h2><p>Removes the file from the repo. The delete commit is published immediately.</p>
+              <div className="dialog-actions"><button className="dialog-button" type="button" onClick={() => setDeletePath("")}>Cancel</button><button className="dialog-button danger" type="button" onClick={() => void handleDeleteFile()}>Delete</button></div>
+            </section>
+          </div>
+        ) : null}
+
+        <div aria-live="polite" className="sr-only">{status}</div>
+        {toast ? <div className="toast">{toast}</div> : null}
+        {error ? <button className="toast error-toast" type="button" onClick={() => setError("")}>{error}</button> : null}
+      </main>
+      <p className="prototype-caption">Tap <code>•••</code> on a directory for <em>new file here</em> or <em>move all up</em>. The <code>+</code> button creates a markdown file.</p>
     </div>
   );
 }

@@ -79,7 +79,7 @@ async function deleteBranch(branch: string): Promise<void> {
 test.describe("live browser flow", () => {
   const uniqueSuffix = Date.now().toString();
   const initialFileName = `e2e-ui-${uniqueSuffix}.md`;
-  const movedPath = `_short-term/e2e-ui-${uniqueSuffix}-moved.md`;
+  const movedPath = `_short-term/${initialFileName}`;
   const initialPath = `__today/${initialFileName}`;
 
   test.beforeAll(async () => {
@@ -93,20 +93,20 @@ test.describe("live browser flow", () => {
   test("creates, edits, moves, and deletes through the UI", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByLabel("Owner").fill(owner);
-    await page.getByLabel("Repository").fill(repo);
-    await page.getByLabel("Branch").fill(branchName);
-    await page.getByLabel("GitHub token").fill(token!);
+    await page.getByLabel("Owner", { exact: true }).fill(owner);
+    await page.getByLabel("Repository", { exact: true }).fill(repo);
+    await page.getByLabel("Branch", { exact: true }).fill(branchName);
+    await page.getByLabel("GitHub token", { exact: true }).fill(token!);
     await page.getByRole("button", { name: "Save setup and load repository" }).click();
 
     await expect(page.getByText("Loaded", { exact: false })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
 
     await page.getByRole("button", { name: "Create file" }).click();
-    await page.getByLabel("Directory").selectOption("__today");
-    await page.getByLabel("File name").fill(initialFileName);
-    await page.getByLabel("Initial content").fill("# UI live test\n\nstatus=create");
-    await page.getByRole("button", { name: "Create with commit" }).click();
+    const createDialog = page.getByLabel("Create file dialog");
+    await createDialog.locator("select").selectOption("__today");
+    await createDialog.getByLabel("File name", { exact: true }).fill(initialFileName);
+    await createDialog.getByRole("button", { name: "Create with commit" }).click();
 
     await expect(page.getByRole("heading", { name: initialPath })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
@@ -116,14 +116,15 @@ test.describe("live browser flow", () => {
     await page.getByRole("button", { name: "Save commit" }).click();
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
 
-    await page.getByLabel("Move or rename path").fill(movedPath);
-    await page.getByRole("button", { name: "Move or rename with commit" }).click();
+    await page.getByRole("button", { name: "Move", exact: true }).click();
+    await page.getByLabel("Move file").getByRole("button", { name: /_short-term\/.*suggested/ }).click();
+    await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
+    await page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true }).click();
     await expect(page.getByRole("heading", { name: movedPath })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
 
-    page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Delete" }).click();
+    await page.getByLabel("Delete file dialog").getByRole("button", { name: "Delete" }).click();
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByRole("heading", { name: "Select a file" })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: /files/i })).toBeVisible({ timeout: 60_000 });
   });
 });
