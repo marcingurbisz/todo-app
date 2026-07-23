@@ -76,7 +76,7 @@ Is there a way in VS code to have pull done automatically periodically/on change
 > Validation: Aligned the guidance with the behavior observed during the live `todo-app-test` exploratory session, including real stale-head conflicts and the now-fixed stale-read behavior after publish.
 > Learning: For this project, full merge automation is not worth the complexity yet. The rare-conflict path should stay explicit and recoverable, while the laptop workflow should rely on frequent fetch and deliberate fast-forward pulls.
 
-## [REOPEN] I'd like to install this app on my phone via developer settings
+## [DONE 2026-07-23.1] I'd like to install this app on my phone via developer settings
 * Prepare package for android
 * Give me instructions how to install it
 
@@ -88,6 +88,11 @@ MG: Feedback:
 * Install Android sdk on your own. Maybe the best would be that the build do it on its own if sdk is missing?
 * I prefer Kotlin instead of Java and flat strucutre where possible.
 * I prefer to use java 25 nad 21.
+
+> Agent: Implemented and verified a self-contained Android debug build that uses the available JDK 25 and bootstraps the missing Android SDK.
+> Changes: Upgraded the wrapper to Gradle 9.1.0 and AGP 9.0.1 for JDK 25 support, migrated the Android host from Java to a flat `src/main/kotlin/MainActivity.kt`, adopted AGP's built-in Kotlin support with JVM 21 bytecode, removed unused generated Java test stubs, and added `android:build`/`android:install` commands. The Linux x64 build runner downloads checksum-verified Google command-line tools when needed, installs pinned SDK packages through the current Android CLI, syncs Capacitor, builds the APK, and can install it over USB with `adb`.
+> Validation: Ran `npm test`, `npm run build`, and repeated `npm run android:build` successfully on JDK 25. Verified the resulting 4.1 MB APK at `android/app/build/outputs/apk/debug/app-debug.apk`; `aapt` reports application ID `com.marcingurbisz.todoapp`, min SDK 24, target/compile SDK 36, and the expected Internet permission. Documented the phone setup and install flow in `docs/android-developer-install.md`.
+> Learning: Gradle 8.14 cannot run on JDK 25; the officially compatible JDK 25 path starts at Gradle 9.1. AGP 9.0.1 matches Gradle 9.1 and provides built-in Kotlin, avoiding a separate Kotlin Android plugin.
 
 ## [DONE 2026-06-30.2] Add scripted real-repo E2E automation
 
