@@ -113,7 +113,7 @@ maybeDescribe("live GitHub repository flow", () => {
   }
 
   const settings = liveSettings();
-  const fileName = "e2e-zażółć-gęślą-jaźń.md";
+  const fileName = "e2e-zażółć-gęślą-jaźń.md".normalize("NFD");
   const createdPath = `__today/${fileName}`;
   const movedPath = `_short-term/${fileName}`;
 

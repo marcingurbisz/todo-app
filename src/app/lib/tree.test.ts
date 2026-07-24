@@ -25,6 +25,19 @@ describe("tree helpers", () => {
     expect(tree[0].children.map((node) => node.path)).toEqual(["alpha/first.md", "alpha/second.md"]);
   });
 
+  it("carries the blob SHA into a Unicode file node without another path lookup", () => {
+    const decomposedName = "zażółć-gęślą-jaźń.md";
+    const tree = buildFileTree([
+      { path: `__today/${decomposedName}`, sha: "unicode-blob-sha", mode: "100644" },
+    ]);
+
+    expect(tree[0].children[0]).toMatchObject({
+      kind: "file",
+      path: `__today/${decomposedName}`,
+      sha: "unicode-blob-sha",
+    });
+  });
+
   it("sorts top-level workflow directories by semantic priority", () => {
     const tree = buildFileTree([
       { path: "review-every-weekend/health.md", sha: "1", mode: "100644" },

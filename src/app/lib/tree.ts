@@ -90,6 +90,7 @@ export function buildFileTree(entries: RepoFileEntry[]): FileTreeNode[] {
       kind: "directory",
       name,
       path,
+      sha: null,
       children: [],
     };
 
@@ -97,7 +98,7 @@ export function buildFileTree(entries: RepoFileEntry[]): FileTreeNode[] {
     return nextDirectory;
   }
 
-  function upsertFile(children: FileTreeNode[], name: string, path: string) {
+  function upsertFile(children: FileTreeNode[], name: string, path: string, sha: string) {
     const existing = children.find((node) => node.kind === "file" && node.name === name);
 
     if (existing) {
@@ -108,6 +109,7 @@ export function buildFileTree(entries: RepoFileEntry[]): FileTreeNode[] {
       kind: "file",
       name,
       path,
+      sha,
       children: [],
     });
   }
@@ -123,7 +125,7 @@ export function buildFileTree(entries: RepoFileEntry[]): FileTreeNode[] {
       const isFile = index === parts.length - 1;
 
       if (isFile) {
-        upsertFile(currentChildren, part, currentPath);
+        upsertFile(currentChildren, part, currentPath, entry.sha);
       } else {
         const directory = ensureDirectory(currentChildren, part, currentPath);
         currentChildren = directory.children;

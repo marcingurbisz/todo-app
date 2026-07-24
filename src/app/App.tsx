@@ -173,6 +173,10 @@ function mergeExpanded(current: string[], path: string): string[] {
   return Array.from(new Set([...current, ...getAncestorPaths(path)]));
 }
 
+function repositoryPathsEqual(left: string, right: string): boolean {
+  return normalizePath(left).normalize("NFC") === normalizePath(right).normalize("NFC");
+}
+
 interface TreeItemProps {
   disabled: boolean;
   node: FileTreeNode;
@@ -180,9 +184,9 @@ interface TreeItemProps {
   expandedPaths: string[];
   selectedPath: string;
   onToggleDirectory: (path: string) => void;
-  onSelectFile: (path: string) => void;
+  onSelectFile: (file: FileTreeNode) => void;
   onDirectoryMenu: (path: string) => void;
-  onFileMenu: (path: string) => void;
+  onFileMenu: (file: FileTreeNode) => void;
 }
 
 function TreeItem(props: TreeItemProps) {
@@ -230,14 +234,14 @@ function TreeItem(props: TreeItemProps) {
   return (
     <li>
       <div
-        className={`tree-row tree-row-file${selectedPath === node.path ? " tree-row-active" : ""}`}
+        className={`tree-row tree-row-file${repositoryPathsEqual(selectedPath, node.path) ? " tree-row-active" : ""}`}
         style={{ paddingLeft: `${26 + depth * 16}px` }}
       >
-        <button className="tree-row-main" disabled={disabled} type="button" onClick={() => onSelectFile(node.path)}>
+        <button className="tree-row-main" disabled={disabled} type="button" onClick={() => onSelectFile(node)}>
         <span className="tree-icon"><Icon name="file" size={16} /></span>
         <span className="tree-label">{displayName(node.name)}</span>
         </button>
-        <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" disabled={disabled} type="button" onClick={() => onFileMenu(node.path)}>•••</button>
+        <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" disabled={disabled} type="button" onClick={() => onFileMenu(node)}>•••</button>
       </div>
     </li>
   );
@@ -342,7 +346,7 @@ export function App() {
         return Array.from(new Set([...current, ...topLevelDirectories]));
       });
 
-      if (selectedPath && !nextSnapshot.files.some((entry) => entry.path === selectedPath)) {
+      if (selectedPath && !nextSnapshot.files.some((entry) => repositoryPathsEqual(entry.path, selectedPath))) {
         setSelectedPath("");
         setFileContent("");
         setSavedContent("");
@@ -358,21 +362,21 @@ export function App() {
     }
   }
 
-  async function loadSelectedFile(path: string) {
+  async function loadSelectedFile(file: FileTreeNode) {
     if (hasUnsavedChanges && !window.confirm("Discard unsaved editor changes?")) {
       return;
     }
 
+    const { path, sha } = file;
     setIsBusy(true);
     setError("");
     setStatus(`Loading ${path}...`);
 
     try {
-      const file = snapshot?.files.find((entry) => entry.path === path);
-      if (!file) {
+      if (!sha) {
         throw new Error("The selected file is no longer present in the loaded repository tree. Pull the latest repository state and try again.");
       }
-      const content = await readFileContent(settings, file);
+      const content = await readFileContent(settings, { sha });
       setSelectedPath(path);
       setFileContent(content);
       setSavedContent(content);
@@ -402,7 +406,7 @@ export function App() {
       return nextSnapshot;
     }
 
-    const file = nextSnapshot.files.find((entry) => entry.path === nextSelectedPath);
+    const file = nextSnapshot.files.find((entry) => repositoryPathsEqual(entry.path, nextSelectedPath));
     if (!file) {
       throw new Error(`The published file ${nextSelectedPath} was not found in the refreshed repository tree.`);
     }
@@ -491,7 +495,7 @@ export function App() {
       return;
     }
 
-    if (snapshot?.files.some((entry) => entry.path === normalizedPath)) {
+    if (snapshot?.files.some((entry) => repositoryPathsEqual(entry.path, normalizedPath))) {
       setError("That file already exists in the repository tree.");
       return;
     }
@@ -543,15 +547,15 @@ export function App() {
     }
   }
 
-  async function openFileMoveSheet(path: string) {
+  async function openFileMoveSheet(file: FileTreeNode) {
+    const { path, sha } = file;
     setIsBusy(true);
     setError("");
     try {
-      const file = snapshot?.files.find((entry) => entry.path === path);
-      if (!file) {
+      if (!sha) {
         throw new Error("The selected file is no longer present in the loaded repository tree. Pull the latest repository state and try again.");
       }
-      const content = await readFileContent(settings, file);
+      const content = await readFileContent(settings, { sha });
       setSelectedPath(path);
       setFileContent(content);
       setSavedContent(content);
@@ -735,7 +739,7 @@ export function App() {
               <div className="tree-scroll">
                 {snapshot ? (
                   <ul className="tree-list">
-                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} disabled={isBusy} expandedPaths={effectiveExpandedPaths} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(path) => void openFileMoveSheet(path)} onSelectFile={(path) => void loadSelectedFile(path)} onToggleDirectory={toggleDirectory} selectedPath={selectedPath} />)}
+                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} disabled={isBusy} expandedPaths={effectiveExpandedPaths} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(file) => void openFileMoveSheet(file)} onSelectFile={(file) => void loadSelectedFile(file)} onToggleDirectory={toggleDirectory} selectedPath={selectedPath} />)}
                   </ul>
                 ) : <div className="empty-state">Pulling repository…</div>}
                 {snapshot && filteredTree.length === 0 ? <div className="empty-state">No matching files</div> : null}

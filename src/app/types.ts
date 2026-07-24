@@ -15,6 +15,7 @@ export interface FileTreeNode {
   kind: "file" | "directory";
   name: string;
   path: string;
+  sha: string | null;
   children: FileTreeNode[];
 }
 
