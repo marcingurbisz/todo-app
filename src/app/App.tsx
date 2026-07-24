@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
 import { marked } from "marked";
 import { commitRepositoryChanges, loadRepository, readFileContent } from "./lib/github";
 import { filterFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
@@ -7,9 +8,9 @@ import type { FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
 const SETTINGS_STORAGE_KEY = "todo-app.settings";
 
 const DEFAULT_SETTINGS: RepoSettings = {
-  owner: "",
-  repo: "",
-  branch: "",
+  owner: "marcingurbisz",
+  repo: "todo",
+  branch: "main",
   token: "",
 };
 
@@ -173,6 +174,7 @@ function mergeExpanded(current: string[], path: string): string[] {
 }
 
 interface TreeItemProps {
+  disabled: boolean;
   node: FileTreeNode;
   depth: number;
   expandedPaths: string[];
@@ -184,7 +186,7 @@ interface TreeItemProps {
 }
 
 function TreeItem(props: TreeItemProps) {
-  const { depth, expandedPaths, node, onDirectoryMenu, onFileMenu, onSelectFile, onToggleDirectory, selectedPath } = props;
+  const { depth, disabled, expandedPaths, node, onDirectoryMenu, onFileMenu, onSelectFile, onToggleDirectory, selectedPath } = props;
 
   if (node.kind === "directory") {
     const isExpanded = expandedPaths.includes(node.path);
@@ -195,13 +197,13 @@ function TreeItem(props: TreeItemProps) {
           className="tree-row tree-row-directory"
           style={{ paddingLeft: `${12 + depth * 16}px` }}
         >
-          <button className="tree-row-main" type="button" onClick={() => onToggleDirectory(node.path)}>
+          <button className="tree-row-main" disabled={disabled} type="button" onClick={() => onToggleDirectory(node.path)}>
           <span className={`tree-chevron${isExpanded ? " tree-chevron-open" : ""}`}><Icon name="chevron" size={10} /></span>
           <span className="tree-icon"><Icon name="folder" size={16} /></span>
           <span className="tree-label">{node.name}</span>
           </button>
           <span className={badgeClassName(node.name)}>{node.children.length === 0 ? "empty" : node.children.length}</span>
-          <button aria-label={`Actions for directory ${node.path}`} className="icon-button node-menu" type="button" onClick={() => onDirectoryMenu(node.path)}>•••</button>
+          <button aria-label={`Actions for directory ${node.path}`} className="icon-button node-menu" disabled={disabled} type="button" onClick={() => onDirectoryMenu(node.path)}>•••</button>
         </div>
         {isExpanded ? (
           <ul className="tree-list">
@@ -209,6 +211,7 @@ function TreeItem(props: TreeItemProps) {
               <TreeItem
                 key={child.path}
                 depth={depth + 1}
+                disabled={disabled}
                 expandedPaths={expandedPaths}
                 node={child}
                 onDirectoryMenu={onDirectoryMenu}
@@ -230,11 +233,11 @@ function TreeItem(props: TreeItemProps) {
         className={`tree-row tree-row-file${selectedPath === node.path ? " tree-row-active" : ""}`}
         style={{ paddingLeft: `${26 + depth * 16}px` }}
       >
-        <button className="tree-row-main" type="button" onClick={() => onSelectFile(node.path)}>
+        <button className="tree-row-main" disabled={disabled} type="button" onClick={() => onSelectFile(node.path)}>
         <span className="tree-icon"><Icon name="file" size={16} /></span>
         <span className="tree-label">{displayName(node.name)}</span>
         </button>
-        <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" type="button" onClick={() => onFileMenu(node.path)}>•••</button>
+        <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" disabled={disabled} type="button" onClick={() => onFileMenu(node.path)}>•••</button>
       </div>
     </li>
   );
@@ -256,7 +259,7 @@ export function App() {
   const [isBusy, setIsBusy] = useState(false);
   const [showSettings, setShowSettings] = useState(!hasConfiguredSettings(initialSettings));
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [createFileName, setCreateFileName] = useState("new-note.md");
+  const [createFileName, setCreateFileName] = useState("");
   const [createFileDirectory, setCreateFileDirectory] = useState("__today");
   const [createFileContent, setCreateFileContent] = useState("");
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
@@ -300,6 +303,28 @@ export function App() {
     const timeout = window.setTimeout(() => setToast(""), 2400);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    const registration = CapacitorApp.addListener("backButton", () => {
+      if (showCreateDialog) {
+        setShowCreateDialog(false);
+      } else if (deletePath) {
+        setDeletePath("");
+      } else if (actionSheet) {
+        setActionSheet(null);
+      } else if (showSettings && !isFirstRun) {
+        closeSettings();
+      } else if (activePane === "editor") {
+        setActivePane("files");
+      } else {
+        void CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      void registration.then((listener) => listener.remove());
+    };
+  }, [actionSheet, activePane, deletePath, isFirstRun, showCreateDialog, showSettings]);
 
   async function syncRepository(nextSettings = settings) {
     setIsBusy(true);
@@ -461,17 +486,17 @@ export function App() {
     const published = await publishChanges(
       `Create ${normalizedPath}`,
       [{ path: normalizedPath, content: createFileContent }],
-      normalizedPath,
+      null,
     );
 
     if (!published) {
       return;
     }
 
-    setCreateFileName("new-note.md");
+    setCreateFileName("");
     setCreateFileContent("");
     setShowCreateDialog(false);
-    setActivePane("editor");
+    setActivePane("files");
   }
 
   async function handleSaveFile() {
@@ -600,7 +625,7 @@ export function App() {
   function openCreateDialog(directory?: string) {
     const suggestedDirectory = directory || getParentDirectory(selectedPath) || directoryOptions[0] || "__today";
     setCreateFileDirectory(suggestedDirectory);
-    setCreateFileName("new-note.md");
+    setCreateFileName("");
     setCreateFileContent("");
     setActionSheet(null);
     setShowCreateDialog(true);
@@ -617,14 +642,14 @@ export function App() {
 
   return (
     <div className="prototype-stage">
-      <main className="device">
+      <main className={`device${isBusy ? " busy" : ""}`}>
         {!showSettings && activePane === "files" ? (
           <header className="appbar">
             <h1 className="appbar-title"><Icon name="sync" /><span>todo</span></h1>
             <div className="appbar-actions">
               <span className={`sync-chip${isBusy ? " syncing" : ""}`}><span className="sync-dot" />{isBusy ? "publishing…" : "synced"}</span>
-              <button aria-label="Search" className="icon-button" type="button" onClick={() => setShowSearch((current) => !current)}><Icon name="search" /></button>
-              <button aria-label="Settings" className="icon-button" type="button" onClick={openSettings}><Icon name="gear" /></button>
+              <button aria-label="Search" className="icon-button" disabled={isBusy} type="button" onClick={() => setShowSearch((current) => !current)}><Icon name="search" /></button>
+              <button aria-label="Settings" className="icon-button" disabled={isBusy} type="button" onClick={openSettings}><Icon name="gear" /></button>
             </div>
           </header>
         ) : null}
@@ -646,7 +671,6 @@ export function App() {
                 <div className="setting-group">
                   <span className="setting-label">Sync</span>
                   <div className="settings-inline-actions">
-                    <button className="action-button" disabled={isBusy} type="button" onClick={() => void syncRepository(settingsDraft)}>Test connection</button>
                     <button className="action-button" disabled={isBusy || isFirstRun} type="button" onClick={() => void syncRepository()}>Pull now</button>
                   </div>
                   <p className="setting-hint">Last pull: {lastSyncAt ?? "not synced in this session"}{snapshot ? ` · ${snapshot.files.length} files` : ""}</p>
@@ -694,12 +718,12 @@ export function App() {
               <div className="tree-scroll">
                 {snapshot ? (
                   <ul className="tree-list">
-                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} expandedPaths={effectiveExpandedPaths} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(path) => void openFileMoveSheet(path)} onSelectFile={(path) => void loadSelectedFile(path)} onToggleDirectory={toggleDirectory} selectedPath={selectedPath} />)}
+                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} disabled={isBusy} expandedPaths={effectiveExpandedPaths} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(path) => void openFileMoveSheet(path)} onSelectFile={(path) => void loadSelectedFile(path)} onToggleDirectory={toggleDirectory} selectedPath={selectedPath} />)}
                   </ul>
                 ) : <div className="empty-state">Pulling repository…</div>}
                 {snapshot && filteredTree.length === 0 ? <div className="empty-state">No matching files</div> : null}
               </div>
-              <button aria-label="Create file" className="floating-create-button" type="button" onClick={() => openCreateDialog()}><Icon name="plus" size={22} /></button>
+              <button aria-label="Create file" className="floating-create-button" disabled={isBusy} type="button" onClick={() => openCreateDialog()}><Icon name="plus" size={22} /></button>
             </section>
           )}
         </section>
@@ -710,8 +734,8 @@ export function App() {
               <div className="sheet-handle" />
               <h2>Move {displayName(actionSheet.path)}</h2>
               <p>from <code>{getParentDirectory(actionSheet.path)}/</code></p>
-              {suggestedDestinations.length > 0 ? <><div className="sheet-section">Suggested</div>{suggestedDestinations.map((path) => <button className="sheet-row suggested" key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span><small>suggested</small></button>)}<div className="sheet-section">All directories</div></> : null}
-              {otherDestinations.map((path) => <button className="sheet-row" key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span></button>)}
+              {suggestedDestinations.length > 0 ? <><div className="sheet-section">Suggested</div>{suggestedDestinations.map((path) => <button className="sheet-row suggested" disabled={isBusy} key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span><small>suggested</small></button>)}<div className="sheet-section">All directories</div></> : null}
+              {otherDestinations.map((path) => <button className="sheet-row" disabled={isBusy} key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span></button>)}
             </section>
           </div>
         ) : null}
@@ -720,8 +744,8 @@ export function App() {
           <div className="sheet-backdrop" role="presentation" onClick={() => setActionSheet(null)}>
             <section aria-label="Directory actions" className="bottom-sheet" onClick={(event) => event.stopPropagation()}>
               <div className="sheet-handle" /><h2>{actionSheet.path.split("/").at(-1)}/</h2><p><code>{actionSheet.path}/</code></p>
-              <button className="sheet-row" type="button" onClick={() => openCreateDialog(actionSheet.path)}><Icon name="file" size={16} /><span>New file here</span></button>
-              {getParentDirectory(actionSheet.path) && actionDirectoryFileCount > 0 ? <button className="sheet-row" type="button" onClick={() => void handleMoveFilesUp(actionSheet.path)}><Icon name="move" size={16} /><span>Move all {actionDirectoryFileCount} files up to <code>{getParentDirectory(actionSheet.path)}/</code></span></button> : null}
+              <button className="sheet-row" disabled={isBusy} type="button" onClick={() => openCreateDialog(actionSheet.path)}><Icon name="file" size={16} /><span>New file here</span></button>
+              {getParentDirectory(actionSheet.path) && actionDirectoryFileCount > 0 ? <button className="sheet-row" disabled={isBusy} type="button" onClick={() => void handleMoveFilesUp(actionSheet.path)}><Icon name="move" size={16} /><span>Move all {actionDirectoryFileCount} files up to <code>{getParentDirectory(actionSheet.path)}/</code></span></button> : null}
             </section>
           </div>
         ) : null}
@@ -741,7 +765,7 @@ export function App() {
           <div className="dialog-backdrop" role="presentation" onClick={() => setDeletePath("")}>
             <section aria-label="Delete file dialog" className="dialog" onClick={(event) => event.stopPropagation()}>
               <h2>Delete {displayName(deletePath)}?</h2><p>Removes the file from the repo. The delete commit is published immediately.</p>
-              <div className="dialog-actions"><button className="dialog-button" type="button" onClick={() => setDeletePath("")}>Cancel</button><button className="dialog-button danger" type="button" onClick={() => void handleDeleteFile()}>Delete</button></div>
+              <div className="dialog-actions"><button className="dialog-button" type="button" onClick={() => setDeletePath("")}>Cancel</button><button className="dialog-button danger" disabled={isBusy} type="button" onClick={() => void handleDeleteFile()}>Delete</button></div>
             </section>
           </div>
         ) : null}

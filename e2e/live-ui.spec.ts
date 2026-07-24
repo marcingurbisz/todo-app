@@ -93,6 +93,9 @@ test.describe("live browser flow", () => {
   test("creates, edits, moves, and deletes through the UI", async ({ page }) => {
     await page.goto("/");
 
+    await expect(page.getByLabel("Owner", { exact: true })).toHaveValue("marcingurbisz");
+    await expect(page.getByLabel("Repository", { exact: true })).toHaveValue("todo");
+    await expect(page.getByLabel("Branch", { exact: true })).toHaveValue("main");
     await page.getByLabel("Owner", { exact: true }).fill(owner);
     await page.getByLabel("Repository", { exact: true }).fill(repo);
     await page.getByLabel("Branch", { exact: true }).fill(branchName);
@@ -104,17 +107,23 @@ test.describe("live browser flow", () => {
 
     await page.getByRole("button", { name: "Create file" }).click();
     const createDialog = page.getByLabel("Create file dialog");
+    await expect(createDialog.getByLabel("File name", { exact: true })).toHaveValue("");
     await createDialog.locator("select").selectOption("__today");
     await createDialog.getByLabel("File name", { exact: true }).fill(initialFileName);
     await createDialog.getByRole("button", { name: "Create with commit" }).click();
 
-    await expect(page.getByRole("heading", { name: initialPath })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
+    await page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true }).click();
+    await expect(page.getByRole("heading", { name: initialPath })).toBeVisible({ timeout: 60_000 });
 
     await page.getByRole("button", { name: "Raw" }).click();
     await page.getByLabel("File contents").fill("# UI live test\n\nstatus=edit");
     await page.getByRole("button", { name: "Save commit" }).click();
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
+    await page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true }).click();
 
     await page.getByRole("button", { name: "Move", exact: true }).click();
     await page.getByLabel("Move file").getByRole("button", { name: /_short-term\/.*suggested/ }).click();
