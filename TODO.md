@@ -4,6 +4,14 @@
 * Review docs/
 * Execute security review before publishing to Google Play store
 
+## [DONE 2026-07-24.3] Dodaj możliwość zaznaczania kilku plików naraz
+i przeniesienia ich do razem do innego katalogu
+
+> Agent: Added an explicit multi-selection mode to the file tree. Tap `Select`, choose any number of files using the visible checkboxes, tap `Move`, and choose one destination directory.
+> Changes: The selection header shows the current count and supports cancel/back. The floating create action and per-file menus stay out of the way while selecting. All selected files are read by blob SHA and moved in one GitHub commit; the app rejects duplicate selected basenames and existing destination collisions before publishing, so it never silently overwrites a file. A successful move clears selection and refreshes the tree.
+> Validation: `npm test` passed 9 tests and `npm run build` passed. The updated real browser E2E created two files (including an NFD Polish filename), selected both in the tree, moved both to `_short-term` with one UI action, reopened the Polish file, and deleted it successfully. `npm run android:build` passed on JDK 25 with Gradle 9.1 and produced the 4,348,020-byte debug APK at `android/app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `5c6cbad684a0e4b493d6fc6834295751287c115640f112caf1a6cd6dd979022f`).
+> Learning: Bulk moves should remain one atomic repository commit. Validating every destination before creating the tree delta avoids partial moves and makes filename collisions recoverable without repository cleanup.
+
 ## [DONE 2026-07-24.2] There is a problem when files have polish letters in the name.
 Moving such files do not work. Please check it and fix it. BTW: Error message was misleading - it was about wrong configuration.
 

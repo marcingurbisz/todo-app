@@ -18,6 +18,7 @@ type PaneName = "files" | "editor";
 type EditorMode = "preview" | "raw";
 type ActionSheet =
   | { type: "move"; path: string }
+  | { type: "move-many" }
   | { type: "directory"; path: string }
   | null;
 
@@ -179,6 +180,7 @@ function repositoryPathsEqual(left: string, right: string): boolean {
 
 interface TreeItemProps {
   disabled: boolean;
+  isSelecting: boolean;
   node: FileTreeNode;
   depth: number;
   expandedPaths: string[];
@@ -187,10 +189,12 @@ interface TreeItemProps {
   onSelectFile: (file: FileTreeNode) => void;
   onDirectoryMenu: (path: string) => void;
   onFileMenu: (file: FileTreeNode) => void;
+  onToggleSelection: (file: FileTreeNode) => void;
+  selectedFiles: FileTreeNode[];
 }
 
 function TreeItem(props: TreeItemProps) {
-  const { depth, disabled, expandedPaths, node, onDirectoryMenu, onFileMenu, onSelectFile, onToggleDirectory, selectedPath } = props;
+  const { depth, disabled, expandedPaths, isSelecting, node, onDirectoryMenu, onFileMenu, onSelectFile, onToggleDirectory, onToggleSelection, selectedFiles, selectedPath } = props;
 
   if (node.kind === "directory") {
     const isExpanded = expandedPaths.includes(node.path);
@@ -217,11 +221,14 @@ function TreeItem(props: TreeItemProps) {
                 depth={depth + 1}
                 disabled={disabled}
                 expandedPaths={expandedPaths}
+                isSelecting={isSelecting}
                 node={child}
                 onDirectoryMenu={onDirectoryMenu}
                 onFileMenu={onFileMenu}
                 onSelectFile={onSelectFile}
                 onToggleDirectory={onToggleDirectory}
+                onToggleSelection={onToggleSelection}
+                selectedFiles={selectedFiles}
                 selectedPath={selectedPath}
               />
             ))}
@@ -231,17 +238,19 @@ function TreeItem(props: TreeItemProps) {
     );
   }
 
+  const isSelected = selectedFiles.some((file) => repositoryPathsEqual(file.path, node.path));
+
   return (
     <li>
       <div
-        className={`tree-row tree-row-file${repositoryPathsEqual(selectedPath, node.path) ? " tree-row-active" : ""}`}
+        className={`tree-row tree-row-file${repositoryPathsEqual(selectedPath, node.path) ? " tree-row-active" : ""}${isSelected ? " tree-row-selected" : ""}`}
         style={{ paddingLeft: `${26 + depth * 16}px` }}
       >
-        <button className="tree-row-main" disabled={disabled} type="button" onClick={() => onSelectFile(node)}>
-        <span className="tree-icon"><Icon name="file" size={16} /></span>
+        <button className="tree-row-main" disabled={disabled} type="button" onClick={() => isSelecting ? onToggleSelection(node) : onSelectFile(node)}>
+        {isSelecting ? <span aria-hidden="true" className={`selection-check${isSelected ? " selected" : ""}`}>{isSelected ? "✓" : ""}</span> : <span className="tree-icon"><Icon name="file" size={16} /></span>}
         <span className="tree-label">{displayName(node.name)}</span>
         </button>
-        <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" disabled={disabled} type="button" onClick={() => onFileMenu(node)}>•••</button>
+        {!isSelecting ? <button aria-label={`Actions for file ${node.path}`} className="icon-button node-menu" disabled={disabled} type="button" onClick={() => onFileMenu(node)}>•••</button> : null}
       </div>
     </li>
   );
@@ -270,6 +279,8 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [actionSheet, setActionSheet] = useState<ActionSheet>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<FileTreeNode[]>([]);
   const [deletePath, setDeletePath] = useState("");
   const [toast, setToast] = useState("");
 
@@ -320,6 +331,9 @@ export function App() {
         closeSettings();
       } else if (activePane === "editor") {
         setActivePane("files");
+      } else if (isSelecting) {
+        setIsSelecting(false);
+        setSelectedFiles([]);
       } else {
         void CapacitorApp.exitApp();
       }
@@ -328,7 +342,7 @@ export function App() {
     return () => {
       void registration.then((listener) => listener.remove());
     };
-  }, [actionSheet, activePane, deletePath, isFirstRun, showCreateDialog, showSettings]);
+  }, [actionSheet, activePane, deletePath, isFirstRun, isSelecting, showCreateDialog, showSettings]);
 
   async function syncRepository(nextSettings = settings) {
     setIsBusy(true);
@@ -547,6 +561,87 @@ export function App() {
     }
   }
 
+  async function handleMoveSelectedFiles(destination: string) {
+    if (!snapshot || selectedFiles.length === 0) {
+      return;
+    }
+
+    const movableFiles = selectedFiles.filter(
+      (file) => !repositoryPathsEqual(getParentDirectory(file.path), destination),
+    );
+
+    if (movableFiles.length === 0) {
+      setError("All selected files are already in that directory.");
+      return;
+    }
+
+    const plannedMoves = movableFiles.map((file) => {
+      const fileName = file.path.split("/").at(-1) ?? file.path;
+      return {
+        file,
+        nextPath: normalizePath(`${destination}/${fileName}`),
+      };
+    });
+    const destinationKeys = plannedMoves.map(({ nextPath }) => nextPath.normalize("NFC"));
+
+    if (new Set(destinationKeys).size !== destinationKeys.length) {
+      setError("Two selected files have the same name and cannot be moved into one directory.");
+      return;
+    }
+
+    const movedSourcePaths = new Set(movableFiles.map((file) => file.path.normalize("NFC")));
+    const collision = plannedMoves.find(({ nextPath }) =>
+      snapshot.files.some(
+        (entry) =>
+          repositoryPathsEqual(entry.path, nextPath) &&
+          !movedSourcePaths.has(entry.path.normalize("NFC")),
+      ),
+    );
+
+    if (collision) {
+      setError(`${collision.nextPath} already exists. No files were moved.`);
+      return;
+    }
+
+    setIsBusy(true);
+    setError("");
+    setStatus(`Preparing ${movableFiles.length} files to move...`);
+
+    let contents: string[];
+    try {
+      contents = await Promise.all(
+        movableFiles.map((file) => {
+          if (!file.sha) {
+            throw new Error(`The content identity for ${file.path} is missing. Pull now and try again.`);
+          }
+          return readFileContent(settings, { sha: file.sha });
+        }),
+      );
+    } catch (nextError) {
+      setError(errorMessage(nextError));
+      setStatus("Preparing selected files failed.");
+      setIsBusy(false);
+      return;
+    }
+
+    setIsBusy(false);
+    const changes = plannedMoves.flatMap(({ file, nextPath }, index) => [
+      { path: file.path, delete: true as const },
+      { path: nextPath, content: contents[index] },
+    ]);
+    const moved = await publishChanges(
+      `Move ${movableFiles.length} files to ${destination}`,
+      changes,
+      null,
+    );
+
+    if (moved) {
+      setActionSheet(null);
+      setIsSelecting(false);
+      setSelectedFiles([]);
+    }
+  }
+
   async function openFileMoveSheet(file: FileTreeNode) {
     const { path, sha } = file;
     setIsBusy(true);
@@ -633,6 +728,20 @@ export function App() {
     );
   }
 
+  function toggleFileSelection(file: FileTreeNode) {
+    setSelectedFiles((current) =>
+      current.some((selectedFile) => repositoryPathsEqual(selectedFile.path, file.path))
+        ? current.filter((selectedFile) => !repositoryPathsEqual(selectedFile.path, file.path))
+        : [...current, file],
+    );
+  }
+
+  function cancelSelection() {
+    setIsSelecting(false);
+    setSelectedFiles([]);
+    setActionSheet(null);
+  }
+
   function openSettings() {
     setSettingsDraft(settings);
     setShowSettings(true);
@@ -666,12 +775,23 @@ export function App() {
       <main className={`device${isBusy ? " busy" : ""}`}>
         {!showSettings && activePane === "files" ? (
           <header className="appbar">
-            <h1 className="appbar-title"><Icon name="sync" /><span>todo</span></h1>
-            <div className="appbar-actions">
-              <span className={`sync-chip${isBusy ? " syncing" : ""}`}><span className="sync-dot" />{isBusy ? "publishing…" : "synced"}</span>
-              <button aria-label="Search" className="icon-button" disabled={isBusy} type="button" onClick={() => setShowSearch((current) => !current)}><Icon name="search" /></button>
-              <button aria-label="Settings" className="icon-button" disabled={isBusy} type="button" onClick={openSettings}><Icon name="gear" /></button>
-            </div>
+            {isSelecting ? (
+              <>
+                <button aria-label="Cancel selection" className="icon-button" disabled={isBusy} type="button" onClick={cancelSelection}><Icon name="back" /></button>
+                <h1 className="appbar-title selection-title">{selectedFiles.length} selected</h1>
+                <button className="selection-move-button" disabled={isBusy || selectedFiles.length === 0} type="button" onClick={() => setActionSheet({ type: "move-many" })}><Icon name="move" size={15} />Move</button>
+              </>
+            ) : (
+              <>
+                <h1 className="appbar-title"><Icon name="sync" /><span>todo</span></h1>
+                <div className="appbar-actions">
+                  <span className={`sync-chip${isBusy ? " syncing" : ""}`}><span className="sync-dot" />{isBusy ? "publishing…" : "synced"}</span>
+                  <button aria-label="Select files" className="selection-start-button" disabled={isBusy || !snapshot} type="button" onClick={() => setIsSelecting(true)}>Select</button>
+                  <button aria-label="Search" className="icon-button" disabled={isBusy} type="button" onClick={() => setShowSearch((current) => !current)}><Icon name="search" /></button>
+                  <button aria-label="Settings" className="icon-button" disabled={isBusy} type="button" onClick={openSettings}><Icon name="gear" /></button>
+                </div>
+              </>
+            )}
           </header>
         ) : null}
 
@@ -739,12 +859,12 @@ export function App() {
               <div className="tree-scroll">
                 {snapshot ? (
                   <ul className="tree-list">
-                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} disabled={isBusy} expandedPaths={effectiveExpandedPaths} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(file) => void openFileMoveSheet(file)} onSelectFile={(file) => void loadSelectedFile(file)} onToggleDirectory={toggleDirectory} selectedPath={selectedPath} />)}
+                    {filteredTree.map((node) => <TreeItem key={node.path} depth={0} disabled={isBusy} expandedPaths={effectiveExpandedPaths} isSelecting={isSelecting} node={node} onDirectoryMenu={(path) => setActionSheet({ type: "directory", path })} onFileMenu={(file) => void openFileMoveSheet(file)} onSelectFile={(file) => void loadSelectedFile(file)} onToggleDirectory={toggleDirectory} onToggleSelection={toggleFileSelection} selectedFiles={selectedFiles} selectedPath={selectedPath} />)}
                   </ul>
                 ) : <div className="empty-state">Pulling repository…</div>}
                 {snapshot && filteredTree.length === 0 ? <div className="empty-state">No matching files</div> : null}
               </div>
-              <button aria-label="Create file" className="floating-create-button" disabled={isBusy} type="button" onClick={() => openCreateDialog()}><Icon name="plus" size={22} /></button>
+              {!isSelecting ? <button aria-label="Create file" className="floating-create-button" disabled={isBusy} type="button" onClick={() => openCreateDialog()}><Icon name="plus" size={22} /></button> : null}
             </section>
           )}
         </section>
@@ -757,6 +877,17 @@ export function App() {
               <p>from <code>{getParentDirectory(actionSheet.path)}/</code></p>
               {suggestedDestinations.length > 0 ? <><div className="sheet-section">Suggested</div>{suggestedDestinations.map((path) => <button className="sheet-row suggested" disabled={isBusy} key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span><small>suggested</small></button>)}<div className="sheet-section">All directories</div></> : null}
               {otherDestinations.map((path) => <button className="sheet-row" disabled={isBusy} key={path} type="button" onClick={() => void handleMoveToDirectory(path)}><Icon name="folder" size={16} /><span>{path}/</span></button>)}
+            </section>
+          </div>
+        ) : null}
+
+        {actionSheet?.type === "move-many" ? (
+          <div className="sheet-backdrop" role="presentation" onClick={() => setActionSheet(null)}>
+            <section aria-label="Move selected files" className="bottom-sheet" onClick={(event) => event.stopPropagation()}>
+              <div className="sheet-handle" />
+              <h2>Move {selectedFiles.length} selected files</h2>
+              <p>Choose one destination. The move is published as a single commit.</p>
+              {directoryOptions.map((path) => <button className="sheet-row" disabled={isBusy} key={path} type="button" onClick={() => void handleMoveSelectedFiles(path)}><Icon name="folder" size={16} /><span>{path}/</span></button>)}
             </section>
           </div>
         ) : null}
