@@ -50,13 +50,6 @@ function branchPath(branch: string): string {
     .join("/");
 }
 
-function contentPath(path: string): string {
-  return normalizePath(path)
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-}
-
 function decodeBase64Utf8(value: string): string {
   const sanitizedValue = value.replace(/\n/g, "");
   const binary = atob(sanitizedValue);
@@ -121,14 +114,22 @@ async function waitForBranchHead(settings: RepoSettings, expectedSha: string): P
   }
 }
 
-function formatApiError(error: unknown): Error {
+function formatApiError(error: unknown, operation: "load" | "read" | "publish"): Error {
   if (error instanceof GitHubApiError) {
     if (error.status === 401 || error.status === 403) {
       return new Error("GitHub rejected the request. Check the token and its repository permissions.");
     }
 
     if (error.status === 404) {
-      return new Error("Repository, branch, or file was not found. Check the configured owner, repo, and branch.");
+      if (operation === "read") {
+        return new Error("The file content is no longer available at this repository version. Pull the latest repository state and try again.");
+      }
+
+      if (operation === "publish") {
+        return new Error("GitHub could not find repository data required for this commit. Pull the latest repository state and try again.");
+      }
+
+      return new Error("Repository or branch was not found. Check the configured owner, repository, and branch.");
     }
 
     if (error.status === 422) {
@@ -168,24 +169,27 @@ export async function loadRepository(settings: RepoSettings): Promise<RepoSnapsh
       tree: buildFileTree(files),
     };
   } catch (error) {
-    throw formatApiError(error);
+    throw formatApiError(error, "load");
   }
 }
 
-export async function readFileContent(settings: RepoSettings, path: string): Promise<string> {
+export async function readFileContent(
+  settings: RepoSettings,
+  file: Pick<RepoFileEntry, "sha">,
+): Promise<string> {
   try {
-    const file = await apiRequest<FileContentResponse>(
+    const blob = await apiRequest<FileContentResponse>(
       settings,
-      `/contents/${contentPath(path)}?ref=${encodeURIComponent(settings.branch)}`,
+      `/git/blobs/${encodeURIComponent(file.sha)}`,
     );
 
-    if (file.encoding !== "base64") {
-      throw new Error(`Unsupported file encoding: ${file.encoding}`);
+    if (blob.encoding !== "base64") {
+      throw new Error(`Unsupported file encoding: ${blob.encoding}`);
     }
 
-    return decodeBase64Utf8(file.content);
+    return decodeBase64Utf8(blob.content);
   } catch (error) {
-    throw formatApiError(error);
+    throw formatApiError(error, "read");
   }
 }
 
@@ -258,6 +262,6 @@ export async function commitRepositoryChanges(
 
     return commit.sha;
   } catch (error) {
-    throw formatApiError(error);
+    throw formatApiError(error, "publish");
   }
 }

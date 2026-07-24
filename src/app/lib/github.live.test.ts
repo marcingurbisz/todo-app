@@ -96,6 +96,16 @@ function liveSettings(): RepoSettings {
   };
 }
 
+function fileAt(snapshot: Awaited<ReturnType<typeof loadRepository>>, path: string) {
+  const file = snapshot.files.find((entry) => entry.path === path);
+
+  if (!file) {
+    throw new Error(`Expected ${path} in the repository snapshot.`);
+  }
+
+  return file;
+}
+
 maybeDescribe("live GitHub repository flow", () => {
   if (skipReason) {
     it.skip(skipReason, () => undefined);
@@ -103,8 +113,9 @@ maybeDescribe("live GitHub repository flow", () => {
   }
 
   const settings = liveSettings();
-  const createdPath = "__today/e2e-live-created.md";
-  const movedPath = "_short-term/e2e-live-moved.md";
+  const fileName = "e2e-zażółć-gęślą-jaźń.md";
+  const createdPath = `__today/${fileName}`;
+  const movedPath = `_short-term/${fileName}`;
 
   afterAll(async () => {
     await deleteBranch(branchName);
@@ -127,7 +138,7 @@ maybeDescribe("live GitHub repository flow", () => {
     const createdSnapshot = await loadRepository(settings);
     expect(createdSnapshot.headSha).not.toBe(initialSnapshot.headSha);
     expect(createdSnapshot.files.some((entry) => entry.path === createdPath)).toBe(true);
-    expect(await readFileContent(settings, createdPath)).toContain("step=create");
+    expect(await readFileContent(settings, fileAt(createdSnapshot, createdPath))).toContain("step=create");
 
     await commitRepositoryChanges(settings, {
       baseCommitSha: createdSnapshot.headSha,
@@ -138,7 +149,7 @@ maybeDescribe("live GitHub repository flow", () => {
 
     const editedSnapshot = await loadRepository(settings);
     expect(editedSnapshot.headSha).not.toBe(createdSnapshot.headSha);
-    expect(await readFileContent(settings, createdPath)).toContain("step=edit");
+    expect(await readFileContent(settings, fileAt(editedSnapshot, createdPath))).toContain("step=edit");
 
     await commitRepositoryChanges(settings, {
       baseCommitSha: editedSnapshot.headSha,
@@ -154,7 +165,7 @@ maybeDescribe("live GitHub repository flow", () => {
     expect(movedSnapshot.headSha).not.toBe(editedSnapshot.headSha);
     expect(movedSnapshot.files.some((entry) => entry.path === createdPath)).toBe(false);
     expect(movedSnapshot.files.some((entry) => entry.path === movedPath)).toBe(true);
-    expect(await readFileContent(settings, movedPath)).toContain("step=move");
+    expect(await readFileContent(settings, fileAt(movedSnapshot, movedPath))).toContain("step=move");
 
     await commitRepositoryChanges(settings, {
       baseCommitSha: movedSnapshot.headSha,

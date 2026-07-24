@@ -78,7 +78,7 @@ async function deleteBranch(branch: string): Promise<void> {
 
 test.describe("live browser flow", () => {
   const uniqueSuffix = Date.now().toString();
-  const initialFileName = `e2e-ui-${uniqueSuffix}.md`;
+  const initialFileName = `e2e-ui-zażółć-gęślą-jaźń-${uniqueSuffix}.md`;
   const movedPath = `_short-term/${initialFileName}`;
   const initialPath = `__today/${initialFileName}`;
 

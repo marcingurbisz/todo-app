@@ -368,7 +368,11 @@ export function App() {
     setStatus(`Loading ${path}...`);
 
     try {
-      const content = await readFileContent(settings, path);
+      const file = snapshot?.files.find((entry) => entry.path === path);
+      if (!file) {
+        throw new Error("The selected file is no longer present in the loaded repository tree. Pull the latest repository state and try again.");
+      }
+      const content = await readFileContent(settings, file);
       setSelectedPath(path);
       setFileContent(content);
       setSavedContent(content);
@@ -398,7 +402,11 @@ export function App() {
       return nextSnapshot;
     }
 
-    const content = await readFileContent(settings, nextSelectedPath);
+    const file = nextSnapshot.files.find((entry) => entry.path === nextSelectedPath);
+    if (!file) {
+      throw new Error(`The published file ${nextSelectedPath} was not found in the refreshed repository tree.`);
+    }
+    const content = await readFileContent(settings, file);
     setSelectedPath(nextSelectedPath);
     setFileContent(content);
     setSavedContent(content);
@@ -418,15 +426,20 @@ export function App() {
     setStatus(`Publishing: ${message}`);
 
     try {
-      await commitRepositoryChanges(settings, {
+      const publishedSha = await commitRepositoryChanges(settings, {
         baseCommitSha: snapshot.headSha,
         baseTreeSha: snapshot.treeSha,
         message,
         changes,
       });
 
-      const nextSnapshot = await reloadSnapshotWithSelection(nextSelectedPath);
-      setStatus(`Published successfully. New HEAD ${headLabel(nextSnapshot)}.`);
+      try {
+        const nextSnapshot = await reloadSnapshotWithSelection(nextSelectedPath);
+        setStatus(`Published successfully. New HEAD ${headLabel(nextSnapshot)}.`);
+      } catch (refreshError) {
+        setError(`Commit ${publishedSha.slice(0, 7)} was published, but the app could not refresh: ${errorMessage(refreshError)} Use Pull now before the next change.`);
+        setStatus(`Published successfully at ${publishedSha.slice(0, 7)}, refresh needed.`);
+      }
       setToast(`${message} · published`);
       return true;
     } catch (nextError) {
@@ -534,7 +547,11 @@ export function App() {
     setIsBusy(true);
     setError("");
     try {
-      const content = await readFileContent(settings, path);
+      const file = snapshot?.files.find((entry) => entry.path === path);
+      if (!file) {
+        throw new Error("The selected file is no longer present in the loaded repository tree. Pull the latest repository state and try again.");
+      }
+      const content = await readFileContent(settings, file);
       setSelectedPath(path);
       setFileContent(content);
       setSavedContent(content);
@@ -564,7 +581,7 @@ export function App() {
     setError("");
     try {
       const contents = await Promise.all(
-        entries.map((entry) => readFileContent(settings, entry.path)),
+        entries.map((entry) => readFileContent(settings, entry)),
       );
       const changes = entries.flatMap((entry, index) => {
         const fileName = entry.path.split("/").at(-1) ?? entry.path;
