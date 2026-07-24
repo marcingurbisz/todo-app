@@ -44,6 +44,14 @@ Core workflows for the app:
 
 Everything else in the product follows from that: tree view, editor, sync to GitHub, and conflict handling all exist mainly to support fast file movement across this repository structure.
 
+## Screenshots
+
+The screenshots use a deterministic demo repository rather than private TODO data.
+
+| File tree as the home screen | Markdown preview and editor | Multi-file selection |
+| --- | --- | --- |
+| ![TODO file tree with status directories](docs/images/todo-tree.png) | ![Markdown task preview in the Android app](docs/images/markdown-editor.png) | ![Two tasks selected for an atomic move](docs/images/multi-select.png) |
+
 ## Product goals
 
 - Browse and filter TODO files and directories.
@@ -72,7 +80,7 @@ This keeps concurrent update handling simple for phase one while avoiding silent
 
 - React and TypeScript single-page app.
 - Vite for local development and production builds.
-- Capacitor-ready structure so the web app can later be wrapped as an Android application.
+- Capacitor Android package with a small Kotlin host.
 
 ## Data flow
 
@@ -100,7 +108,7 @@ Detailed practical guidance for mobile conflict handling and VS Code sync habits
 ## Development notes
 
 - Local development will use `npm`, Vite, and the browser.
-- Android packaging is planned via Capacitor after the web app flow is verified.
+- Android packaging uses Capacitor and produces an installable debug APK with `npm run android:build`.
 - Automatic tests should cover repository tree transforms and GitHub API request shaping. Manual exploratory testing should cover real sync behavior with a test repository.
 
 ## Local development
