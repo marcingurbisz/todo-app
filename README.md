@@ -33,6 +33,20 @@ todo/
       health.md
 ```
 
+The main status directories have workflow meaning:
+
+| Directory | Meaning |
+| --- | --- |
+| `__now/` | Work that needs immediate attention. |
+| `__today/` | The active queue for today. |
+| `__today/tomorrow/` | Tasks deliberately deferred to the next daily pass. |
+| `_short-term/` | Near-term work that is not in today's active queue. |
+| `review-every-weekend/` | Tasks and ideas revisited during the weekly review. |
+| `review-every-zmonth/` | Lower-frequency material revisited in a broader monthly review. |
+| `reviewed/` | Items already processed in the current review cycle. |
+
+The `reviewed/` folders make periodic review explicit. At the start of a review pass, files move from `reviewed/` to their parent directory. Each file is then considered again and moved either back to `reviewed/` or into another status directory such as `__today/` or `_short-term/`. The parent directory therefore acts as the current review inbox, while `reviewed/` records progress through that cycle.
+
 Core workflows for the app:
 
 - move files between directories as the primary gesture of the app
@@ -42,6 +56,17 @@ Core workflows for the app:
 - delete the file when the task is done
 
 Everything else in the product follows from that: tree view, editor, sync to GitHub, and conflict handling all exist mainly to support fast file movement across this repository structure.
+
+## Why Git and Markdown
+
+The source-of-truth repository is useful beyond file portability:
+
+- a task that is ready for delegation already lives in a form an agent can read, with nearby project context and documentation
+- task descriptions, inline discussions, execution notes, and completed implementation can remain connected through commits
+- Git provides a complete history of how a task and its status evolved
+- VS Code can be the primary desktop TODO interface, while this Android app and GitHub remain alternative clients for the same data
+
+The app does not introduce another task database or synchronization layer. It is a focused mobile client for the same repository used by the editor and agents.
 
 ## Screenshots
 
