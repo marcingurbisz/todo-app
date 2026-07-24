@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { marked } from "marked";
 import { commitRepositoryChanges, loadRepository, readFileContent } from "./lib/github";
 import { filterFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
-import type { FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
+import type { CommitChange, FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
 
 const SETTINGS_STORAGE_KEY = "todo-app.settings";
 
@@ -178,6 +178,27 @@ function repositoryPathsEqual(left: string, right: string): boolean {
   return normalizePath(left).normalize("NFC") === normalizePath(right).normalize("NFC");
 }
 
+function fileAtPath(snapshot: RepoSnapshot, path: string) {
+  return snapshot.files.find((entry) => repositoryPathsEqual(entry.path, path));
+}
+
+function assertTouchedFilesAreCurrent(
+  baseline: RepoSnapshot,
+  latest: RepoSnapshot,
+  changes: CommitChange[],
+) {
+  const touchedPaths = Array.from(new Set(changes.map((change) => normalizePath(change.path).normalize("NFC"))));
+
+  for (const path of touchedPaths) {
+    const baselineFile = fileAtPath(baseline, path);
+    const latestFile = fileAtPath(latest, path);
+
+    if (baselineFile?.sha !== latestFile?.sha) {
+      throw new Error(`${path} changed in the remote repository. The latest tree has been loaded; reopen the file and try again.`);
+    }
+  }
+}
+
 interface TreeItemProps {
   disabled: boolean;
   isSelecting: boolean;
@@ -283,6 +304,7 @@ export function App() {
   const [selectedFiles, setSelectedFiles] = useState<FileTreeNode[]>([]);
   const [deletePath, setDeletePath] = useState("");
   const [toast, setToast] = useState("");
+  const publishInFlight = useRef(false);
 
   const hasUnsavedChanges = selectedPath !== "" && fileContent !== savedContent;
   const isConfigured = hasConfiguredSettings(settings);
@@ -433,23 +455,48 @@ export function App() {
     return nextSnapshot;
   }
 
-  async function publishChanges(message: string, changes: Array<{ path: string; content?: string; delete?: boolean }>, nextSelectedPath: string | null): Promise<boolean> {
+  async function publishChanges(message: string, changes: CommitChange[], nextSelectedPath: string | null): Promise<boolean> {
     if (!snapshot) {
       setError("Sync the repository before publishing changes.");
       return false;
     }
 
+    if (publishInFlight.current) {
+      return false;
+    }
+
+    publishInFlight.current = true;
     setIsBusy(true);
     setError("");
     setStatus(`Publishing: ${message}`);
 
     try {
-      const publishedSha = await commitRepositoryChanges(settings, {
-        baseCommitSha: snapshot.headSha,
-        baseTreeSha: snapshot.treeSha,
-        message,
-        changes,
-      });
+      const baselineSnapshot = snapshot;
+      let publishedSha = "";
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const latestSnapshot = await loadRepository(settings);
+        assertTouchedFilesAreCurrent(baselineSnapshot, latestSnapshot, changes);
+
+        try {
+          publishedSha = await commitRepositoryChanges(settings, {
+            baseCommitSha: latestSnapshot.headSha,
+            baseTreeSha: latestSnapshot.treeSha,
+            message,
+            changes,
+          });
+          break;
+        } catch (publishError) {
+          const branchMoved = errorMessage(publishError).startsWith("The remote branch moved");
+          if (!branchMoved || attempt === 1) {
+            throw publishError;
+          }
+        }
+      }
+
+      if (!publishedSha) {
+        throw new Error("The commit could not be published after refreshing the remote branch.");
+      }
 
       try {
         const nextSnapshot = await reloadSnapshotWithSelection(nextSelectedPath);
@@ -465,6 +512,7 @@ export function App() {
       setStatus("Publish failed.");
       return false;
     } finally {
+      publishInFlight.current = false;
       setIsBusy(false);
     }
   }

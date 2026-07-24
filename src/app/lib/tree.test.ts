@@ -3,7 +3,11 @@ import { buildFileTree, filterFileTree, getAncestorPaths, getParentDirectory, no
 
 describe("tree helpers", () => {
   it("normalizes user-entered paths", () => {
-    expect(normalizePath(" //alpha\\beta//note.md ")).toBe("alpha/beta/note.md");
+    expect(normalizePath("//alpha\\beta//note.md")).toBe("alpha/beta/note.md");
+  });
+
+  it("preserves whitespace that is part of a repository filename", () => {
+    expect(normalizePath("__today/zażółć gęślą jaźń ")).toBe("__today/zażółć gęślą jaźń ");
   });
 
   it("returns ancestor directories for a file path", () => {
@@ -26,7 +30,7 @@ describe("tree helpers", () => {
   });
 
   it("carries the blob SHA into a Unicode file node without another path lookup", () => {
-    const decomposedName = "zażółć-gęślą-jaźń.md";
+    const decomposedName = "zażółć-gęślą-jaźń ";
     const tree = buildFileTree([
       { path: `__today/${decomposedName}`, sha: "unicode-blob-sha", mode: "100644" },
     ]);

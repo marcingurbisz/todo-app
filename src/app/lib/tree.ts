@@ -52,7 +52,6 @@ function sortNodes(nodes: FileTreeNode[]): FileTreeNode[] {
 export function normalizePath(value: string): string {
   return value
     .replace(/\\/g, "/")
-    .trim()
     .replace(/^\/+/, "")
     .replace(/\/+/g, "/")
     .replace(/\/$/, "");

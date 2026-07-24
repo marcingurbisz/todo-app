@@ -6,6 +6,16 @@ interface GitReferenceResponse {
   };
 }
 
+interface GitCommitResponse {
+  tree: {
+    sha: string;
+  };
+}
+
+interface GitObjectResponse {
+  sha: string;
+}
+
 const owner = process.env.TODO_APP_TEST_OWNER ?? "marcingurbisz";
 const repo = process.env.TODO_APP_TEST_REPO ?? "todo-app-test";
 const baseBranch = process.env.TODO_APP_TEST_BASE_BRANCH ?? "main";
@@ -59,6 +69,37 @@ async function createBranchFromBase(branch: string): Promise<void> {
   });
 }
 
+async function seedFile(branch: string, path: string, content: string): Promise<void> {
+  const headSha = await getBranchHead(branch);
+  const baseCommit = await githubRequest<GitCommitResponse>(`/git/commits/${headSha}`);
+  const blob = await githubRequest<GitObjectResponse>("/git/blobs", {
+    method: "POST",
+    body: JSON.stringify({
+      content: btoa(String.fromCharCode(...new TextEncoder().encode(content))),
+      encoding: "base64",
+    }),
+  });
+  const tree = await githubRequest<GitObjectResponse>("/git/trees", {
+    method: "POST",
+    body: JSON.stringify({
+      base_tree: baseCommit.tree.sha,
+      tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }],
+    }),
+  });
+  const commit = await githubRequest<GitObjectResponse>("/git/commits", {
+    method: "POST",
+    body: JSON.stringify({
+      message: `Seed ${path}`,
+      tree: tree.sha,
+      parents: [headSha],
+    }),
+  });
+  await githubRequest(`/git/refs/heads/${encodeURIComponent(branch)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sha: commit.sha, force: false }),
+  });
+}
+
 async function deleteBranch(branch: string): Promise<void> {
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
@@ -80,11 +121,13 @@ test.describe("live browser flow", () => {
   const uniqueSuffix = Date.now().toString();
   const initialFileName = `e2e-ui-zażółć-gęślą-jaźń-${uniqueSuffix}.md`.normalize("NFD");
   const secondFileName = `e2e-ui-second-${uniqueSuffix}.md`;
+  const trailingSpaceFileName = `e2e-ui-istniejący-${uniqueSuffix} `.normalize("NFD");
   const movedPath = `_short-term/${initialFileName}`;
   const initialPath = `__today/${initialFileName}`;
 
   test.beforeAll(async () => {
     await createBranchFromBase(branchName);
+    await seedFile(branchName, `__today/${trailingSpaceFileName}`, "# Existing file with trailing space");
   });
 
   test.afterAll(async () => {
@@ -105,6 +148,15 @@ test.describe("live browser flow", () => {
 
     await expect(page.getByText("Loaded", { exact: false })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
+
+    await page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true }).click();
+    await page.getByRole("button", { name: "Move", exact: true }).click();
+    await page.getByLabel("Move file").getByRole("button", { name: /_short-term\/.*suggested/ }).click();
+    await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
+    await page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true }).click();
+    await page.getByRole("button", { name: "Delete" }).click();
+    await page.getByLabel("Delete file dialog").getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
 
     await page.getByRole("button", { name: "Create file" }).click();
     const createDialog = page.getByLabel("Create file dialog");

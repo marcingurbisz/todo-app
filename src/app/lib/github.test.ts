@@ -39,4 +39,14 @@ describe("readFileContent", () => {
       "The file content is no longer available at this repository version.",
     );
   });
+
+  it("does not report every GitHub 422 response as a moved remote branch", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response("Invalid tree path", { status: 422 }),
+    ));
+
+    await expect(readFileContent(settings, { sha: "invalid" })).rejects.toThrow(
+      "GitHub rejected the repository change (422): Invalid tree path",
+    );
+  });
 });

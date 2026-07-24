@@ -35,10 +35,12 @@ interface FileContentResponse {
 }
 
 class GitHubApiError extends Error {
+  requestPath: string;
   status: number;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, requestPath: string) {
     super(message);
+    this.requestPath = requestPath;
     this.status = status;
   }
 }
@@ -87,7 +89,7 @@ async function apiRequest<Response>(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new GitHubApiError(errorText || response.statusText, response.status);
+    throw new GitHubApiError(errorText || response.statusText, response.status, path);
   }
 
   return (await response.json()) as Response;
@@ -133,9 +135,13 @@ function formatApiError(error: unknown, operation: "load" | "read" | "publish"):
     }
 
     if (error.status === 422) {
-      return new Error(
-        "The remote branch moved before the commit could be published. Refresh the repository and retry the action.",
-      );
+      if (error.requestPath.startsWith("/git/refs/heads/")) {
+        return new Error(
+          "The remote branch moved before the commit could be published. Refresh the repository and retry the action.",
+        );
+      }
+
+      return new Error(`GitHub rejected the repository change (422): ${error.message}`);
     }
 
     return new Error(`GitHub API error (${error.status}): ${error.message}`);
