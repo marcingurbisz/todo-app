@@ -1,4 +1,4 @@
-# todo-app
+# Todo app
 
 Android-first TODO client for a private Git-backed markdown workflow.
 
@@ -31,7 +31,6 @@ todo/
     reviewed/
       kuba-badania.md
       health.md
-  review-every-zmonth/
 ```
 
 Core workflows for the app:
@@ -59,10 +58,6 @@ The screenshots use a deterministic demo repository rather than private TODO dat
 - Create, rename, move, and delete files or folders.
 - Publish each change to the repository immediately.
 - Stay usable on Android first, desktop second.
-
-Non-goal for this phase:
-
-- do not model completion as a checkbox workflow; completion is represented by deleting the file
 
 ## MVP scope
 
@@ -141,28 +136,13 @@ npm run test:live:ui
   Playwright.
 
 `live` means that these tests mutate real disposable branches in
-`todo-app-test`; it does not mean that the runner is remote. All three commands
-run on the current machine. They use `TODO_APP_TEST_TOKEN` when it is set,
+`todo-app-test`; They use `TODO_APP_TEST_TOKEN` when it is set,
 otherwise they read the PAT from the ignored local `secrets.md`. They enable
 `TODO_APP_LIVE_E2E=1` automatically.
 
 ## Verification strategy
 
-Current state of verification:
-
-- local automated coverage exists for deterministic helper logic only
-- live exploratory verification has already been executed against `todo-app-test`
-- scripted live-repository automation exists as an opt-in test path against disposable `todo-app-test` branches
-- browser-driven live UI automation exists as an opt-in test path against disposable `todo-app-test` branches
-- local convenience launchers exist for API-only, UI-only, and combined real-repo verification against disposable `todo-app-test` branches
-
-What can be verified in the current devcontainer without extra secrets:
-
-- TypeScript compilation and production bundling.
-- Unit tests for path normalization and repository tree shaping.
-- Browser smoke testing of the responsive UI shell, editor flow, and settings flow.
-
-What has already been verified with a real GitHub-backed test target:
+Verified with a real GitHub-backed test target:
 
 - loading the disposable `todo-app-test` repository
 - opening files and reading real remote content
@@ -175,40 +155,3 @@ What has already been verified with a real GitHub-backed test target:
 What is still missing on the automated side:
 
 - a dedicated reusable fixture-reset flow if the scripted branch strategy stops being sufficient
-
-What still benefits from a real GitHub-backed test run:
-
-- reading the private repository with a real token
-- committing file edits to GitHub
-- moving files across directories and checking resulting commits
-- delete flows against a disposable repository state
-- concurrency rejection when the branch head moves between load and publish
-
-Recommended test setup for safe end-to-end verification:
-
-- the existing `todo-app-test` repository with separate branches for scripted and freer exploratory testing
-- a fine-grained token with contents access limited to that test target
-- a small fixture tree with nested directories and markdown files
-
-Automatic tests for the next phase should stay pragmatic and close to the real repository workflow:
-
-- automated tests can run against separate branches of `todo-app-test`, for example one branch for repeatable scripted checks and another for freer exploratory work
-- the most valuable automated coverage is around real create, edit, move, delete, and reload flows against disposable repository state
-- a smaller amount of local unit coverage is still useful for deterministic path and tree transformations that do not need GitHub access
-
-> MG: Not sure if we need that. Don't you think that automatic tests that use real todo-app-test repo + exploratory/free test on that repo are enough? Automatic and exploratory tests can you two different branches of todo-app-test.
-> Agent: Agreed for this project phase. The README now treats real-repository testing on separate `todo-app-test` branches as the primary strategy, with only lightweight local unit tests for pure helper logic.
-
-Exploratory test checklist:
-
-- load the repo and verify file counts and folder nesting
-- open several files and confirm editor content matches GitHub contents
-- edit and save a file, then confirm the commit appears in GitHub
-- move a file to a new path and confirm the old path disappears
-- delete a file and confirm the tree refreshes correctly
-
-## Publish to Google Play
-
-The current codebase is ready for local browser use and internal Android packaging work, but not yet for a public Play Store release as-is.
-
-The detailed release path, store-submission checks, and practical recommendation now live in `docs/google-play-release.md`.
