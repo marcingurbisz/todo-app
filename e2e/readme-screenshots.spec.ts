@@ -76,6 +76,7 @@ test("captures deterministic README screenshots", async ({ page }) => {
     path: "docs/images/todo-tree.png",
   });
 
+  await page.getByRole("button", { name: "__today", exact: true }).click();
   await page.getByRole("button", { name: "write-trello-to-markdown-post", exact: true }).click();
   await expect(page.getByRole("heading", { name: "__today/write-trello-to-markdown-post.md" })).toBeVisible();
   await page.screenshot({

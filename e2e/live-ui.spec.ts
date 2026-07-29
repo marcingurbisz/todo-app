@@ -148,6 +148,8 @@ test.describe("live browser flow", () => {
 
     await expect(page.getByText("Loaded", { exact: false })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "__today", exact: true }).click();
 
     await page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true }).click();
     await page.getByRole("button", { name: "Move", exact: true }).click();

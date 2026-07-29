@@ -25,10 +25,16 @@ Please check if we need so update in the app. For sure we should update document
 > Changes: Replaced `__today/tomorrow` with `__tomorrow` in workflow suggestions and removed all `reviewed/` destinations/badges. Updated the representative repository layout and review workflow in README, the semantic sort regression, deterministic screenshot fixture, and regenerated all three README screenshots. Treated `todo_app_mobile_prototype_v2.html` as a historical design artifact rather than current documentation. In the separate `todo-app-test` repository, moved `mails.md` into new root `__tomorrow/` and flattened all `_short-term/reviewed/` and `review-every-weekend/reviewed/` files into their parents.
 > Validation: Confirmed the current production `todo` tree has root `__tomorrow` and no tracked `reviewed/` or `__today/tomorrow/` paths. `npm test`, `npm run build`, and the deterministic screenshot test passed. Published the fixture migration to `todo-app-test/main` as commit `7cbf981`, then ran the live API create/edit/move/delete flow successfully from that updated main branch.
 
-## [NEW] Sorting and expanding
+## [DONE 2026-07-29.1] Sorting and expanding
 
 * Right now when I kill the app and open it again top level folders are expanded. By default I should see just top level folders with just `now` folder expanded.
+  > Agent: The first repository load now expands only `__now`. Subsequent pulls preserve the user's current expanded/collapsed choices and discard only directories that no longer exist; saving settings for another repository resets the default initialization.
+  > Validation: The live UI test asserts that a seeded `__today` file is absent before explicitly expanding `__today`, then completes the full workflow successfully.
 * `__tomorrow` now lands as last folder while in VS Code I see it just after `__today`
+  > Agent: Added `__tomorrow` to the semantic sort directly after `__today`, before `_short-term` and review directories.
+  > Validation: Extended the unit regression with all relevant top-level directories and regenerated the collapsed-default README tree screenshot.
+
+> Whole item validation: `npm test`, `npm run build`, the deterministic screenshot test, and the real browser E2E all passed.
 
 
 ## [NEW] Maybe move pull now from settings screen somewhare to main screen?

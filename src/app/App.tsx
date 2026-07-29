@@ -299,6 +299,7 @@ export function App() {
   const [deletePath, setDeletePath] = useState("");
   const [toast, setToast] = useState("");
   const publishInFlight = useRef(false);
+  const expandedPathsInitialized = useRef(false);
 
   const hasUnsavedChanges = selectedPath !== "" && fileContent !== savedContent;
   const isConfigured = hasConfiguredSettings(settings);
@@ -368,13 +369,14 @@ export function App() {
     try {
       const nextSnapshot = await loadRepository(nextSettings);
       setSnapshot(nextSnapshot);
-      setExpandedPaths((current) => {
-        const topLevelDirectories = nextSnapshot.tree
-          .filter((node) => node.kind === "directory")
-          .map((node) => node.path);
-
-        return Array.from(new Set([...current, ...topLevelDirectories]));
-      });
+      const directoryPaths = new Set(listDirectoryPaths(nextSnapshot.tree));
+      const initializeExpandedPaths = !expandedPathsInitialized.current;
+      expandedPathsInitialized.current = true;
+      setExpandedPaths((current) =>
+        initializeExpandedPaths
+          ? directoryPaths.has("__now") ? ["__now"] : []
+          : current.filter((path) => directoryPaths.has(path)),
+      );
 
       if (selectedPath && !nextSnapshot.files.some((entry) => repositoryPathsEqual(entry.path, selectedPath))) {
         setSelectedPath("");
@@ -530,6 +532,7 @@ export function App() {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(nextSettings));
     setShowSettings(false);
     setActivePane("files");
+    expandedPathsInitialized.current = false;
     await syncRepository(nextSettings);
   }
 
