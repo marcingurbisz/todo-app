@@ -264,7 +264,7 @@ function TreeItem(props: TreeItemProps) {
   return (
     <li>
       <div
-        className={`tree-row tree-row-file${repositoryPathsEqual(selectedPath, node.path) ? " tree-row-active" : ""}${isSelected ? " tree-row-selected" : ""}`}
+        className={`tree-row tree-row-file${!isSelecting && repositoryPathsEqual(selectedPath, node.path) ? " tree-row-active" : ""}${isSelected ? " tree-row-selected" : ""}`}
         style={{ paddingLeft: `${26 + depth * 16}px` }}
       >
         <button className="tree-row-main" disabled={disabled} type="button" onClick={() => isSelecting ? onToggleSelection(node) : onSelectFile(node)}>

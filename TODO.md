@@ -3,7 +3,7 @@
 ## [FOR HUMAN]
 * Review docs/
 
-## [REOPEN] Dodaj możliwość zaznaczania kilku plików naraz
+## [DONE 2026-07-29.1] Dodaj możliwość zaznaczania kilku plików naraz
 i przeniesienia ich do razem do innego katalogu
 
 > Agent: Added an explicit multi-selection mode to the file tree. Tap `Select`, choose any number of files using the visible checkboxes, tap `Move`, and choose one destination directory.
@@ -11,6 +11,10 @@ i przeniesienia ich do razem do innego katalogu
 > Validation: `npm test` passed 9 tests and `npm run build` passed. The updated real browser E2E created two files (including an NFD Polish filename), selected both in the tree, moved both to `_short-term` with one UI action, reopened the Polish file, and deleted it successfully. `npm run android:build` passed on JDK 25 with Gradle 9.1 and produced the 4,348,020-byte debug APK at `android/app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `5c6cbad684a0e4b493d6fc6834295751287c115640f112caf1a6cd6dd979022f`).
 
 MG: Second select highlight previously selected row. I think this is not necessary.
+
+> Agent: Agreed. The second highlight came from the normal “last opened file” state leaking into selection mode.
+> Changes: Suppressed `tree-row-active` while `Select` mode is enabled; only rows explicitly checked by the user now receive selection highlighting.
+> Validation: `npm test` passed 11 tests and `npm run build` passed. Extended the real browser E2E to open a file, return to the tree, enter selection mode, and assert that the previously opened row is not active before selecting it. The live UI test passed after restoring the updated environment's missing Playwright Chromium binary and Linux libraries; the unrelated Yarn APT source was temporarily disabled and automatically restored during that environment repair.
 
 ## [NEW] Changes in the todo repo structure
 
