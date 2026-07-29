@@ -48,12 +48,14 @@ describe("tree helpers", () => {
       { path: "_short-term/idea.md", sha: "2", mode: "100644" },
       { path: "__today/task.md", sha: "3", mode: "100644" },
       { path: "__now/focus.md", sha: "4", mode: "100644" },
-      { path: "zeta.md", sha: "5", mode: "100644" },
+      { path: "__tomorrow/later.md", sha: "5", mode: "100644" },
+      { path: "zeta.md", sha: "6", mode: "100644" },
     ]);
 
     expect(tree.map((node) => node.path)).toEqual([
       "__now",
       "__today",
+      "__tomorrow",
       "_short-term",
       "review-every-weekend",
       "zeta.md",

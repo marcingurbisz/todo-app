@@ -23,14 +23,12 @@ type ActionSheet =
   | null;
 
 const MOVE_SUGGESTIONS: Record<string, string[]> = {
-  "__today": ["__today/tomorrow", "_short-term", "__now"],
-  "__today/tomorrow": ["__today", "_short-term"],
-  "__now": ["__today", "_short-term"],
-  "_short-term": ["_short-term/reviewed", "__today", "__now"],
-  "_short-term/reviewed": ["_short-term", "__today"],
-  "review-every-weekend": ["review-every-weekend/reviewed"],
-  "review-every-weekend/reviewed": ["review-every-weekend"],
-  "review-every-zmonth": ["_short-term"],
+  "__today": ["__tomorrow", "_short-term", "__now"],
+  "__tomorrow": ["__today", "_short-term", "__now"],
+  "__now": ["__today", "__tomorrow", "_short-term"],
+  "_short-term": ["__today", "__tomorrow", "__now"],
+  "review-every-weekend": ["__today", "_short-term", "__now"],
+  "review-every-zmonth": ["_short-term", "__today"],
 };
 
 marked.setOptions({
@@ -48,7 +46,7 @@ function badgeClassName(name: string): string {
     return "folder-badge folder-badge-now";
   }
 
-  if (name === "__today" || name === "tomorrow") {
+  if (name === "__today" || name === "__tomorrow") {
     return "folder-badge folder-badge-today";
   }
 
@@ -58,10 +56,6 @@ function badgeClassName(name: string): string {
 
   if (name.startsWith("review-")) {
     return "folder-badge folder-badge-review";
-  }
-
-  if (name === "reviewed") {
-    return "folder-badge folder-badge-reviewed";
   }
 
   return "folder-badge folder-badge-generic";

@@ -4,10 +4,10 @@ const files = [
   { path: "__now/fix-production-alert.md", sha: "blob-now" },
   { path: "__today/write-trello-to-markdown-post.md", sha: "blob-post" },
   { path: "__today/review-agent-pr.md", sha: "blob-review" },
-  { path: "__today/tomorrow/book-flights.md", sha: "blob-flights" },
+  { path: "__tomorrow/book-flights.md", sha: "blob-flights" },
   { path: "_short-term/ship-todo-android-app.md", sha: "blob-app" },
-  { path: "_short-term/reviewed/refresh-personal-site.md", sha: "blob-site" },
-  { path: "review-every-weekend/reviewed/plan-next-week.md", sha: "blob-week" },
+  { path: "_short-term/refresh-personal-site.md", sha: "blob-site" },
+  { path: "review-every-weekend/plan-next-week.md", sha: "blob-week" },
 ];
 
 const contents: Record<string, string> = {

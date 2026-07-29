@@ -20,17 +20,15 @@ todo/
     flowlite.md
     mails.md
     publishing.md
-    tomorrow/
-      settle-the-tax
+  __tomorrow/
+    settle-the-tax
   _short-term/
-    reviewed/
-      ief.md
-      how-to-live-well.md
-      always-on-agent-with-access-to-repo.md
+    ief.md
+    how-to-live-well.md
+    always-on-agent-with-access-to-repo.md
   review-every-weekend/
-    reviewed/
-      kuba-badania.md
-      health.md
+    kuba-badania.md
+    health.md
 ```
 
 The main status directories have workflow meaning:
@@ -39,13 +37,12 @@ The main status directories have workflow meaning:
 | --- | --- |
 | `__now/` | Work that needs immediate attention. |
 | `__today/` | The active queue for today. |
-| `__today/tomorrow/` | Tasks deliberately deferred to the next daily pass. |
+| `__tomorrow/` | Tasks deliberately deferred to the next daily pass. |
 | `_short-term/` | Near-term work that is not in today's active queue. |
 | `review-every-weekend/` | Tasks and ideas revisited during the weekly review. |
 | `review-every-zmonth/` | Lower-frequency material revisited in a broader monthly review. |
-| `reviewed/` | Items already processed in the current review cycle. |
 
-The `reviewed/` folders make periodic review explicit. At the start of a review pass, files move from `reviewed/` to their parent directory. Each file is then considered again and moved either back to `reviewed/` or into another status directory such as `__today/` or `_short-term/`. The parent directory therefore acts as the current review inbox, while `reviewed/` records progress through that cycle.
+Review directories now contain their files directly; there is no nested `reviewed/` state. During a review, an item either remains in its review directory for the next cycle or moves to an active status such as `__now/`, `__today/`, `__tomorrow/`, or `_short-term/`.
 
 Core workflows for the app:
 

@@ -16,10 +16,14 @@ MG: Second select highlight previously selected row. I think this is not necessa
 > Changes: Suppressed `tree-row-active` while `Select` mode is enabled; only rows explicitly checked by the user now receive selection highlighting.
 > Validation: `npm test` passed 11 tests and `npm run build` passed. Extended the real browser E2E to open a file, return to the tree, enter selection mode, and assert that the previously opened row is not active before selecting it. The live UI test passed after restoring the updated environment's missing Playwright Chromium binary and Linux libraries; the unrelated Yarn APT source was temporarily disabled and automatically restored during that environment repair.
 
-## [NEW] Changes in the todo repo structure
+## [DONE 2026-07-29.1] Changes in the todo repo structure
 
 I have removed `reviewed` subdirectories from my todo repo. Also `__today/tomorrow` has been moved to `__tomorrow`
 Please check if we need so update in the app. For sure we should update documentation and and todo-app-test
+
+> Agent: The app did require updates: move suggestions still targeted removed `reviewed/` directories, and the tree sorter did not recognize root-level `__tomorrow`.
+> Changes: Replaced `__today/tomorrow` with `__tomorrow` in workflow suggestions and removed all `reviewed/` destinations/badges. Updated the representative repository layout and review workflow in README, the semantic sort regression, deterministic screenshot fixture, and regenerated all three README screenshots. Treated `todo_app_mobile_prototype_v2.html` as a historical design artifact rather than current documentation. In the separate `todo-app-test` repository, moved `mails.md` into new root `__tomorrow/` and flattened all `_short-term/reviewed/` and `review-every-weekend/reviewed/` files into their parents.
+> Validation: Confirmed the current production `todo` tree has root `__tomorrow` and no tracked `reviewed/` or `__today/tomorrow/` paths. `npm test`, `npm run build`, and the deterministic screenshot test passed. Published the fixture migration to `todo-app-test/main` as commit `7cbf981`, then ran the live API create/edit/move/delete flow successfully from that updated main branch.
 
 ## [NEW] Sorting and expanding
 

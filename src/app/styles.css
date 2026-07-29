@@ -320,7 +320,6 @@ button { border: 0; }
 .folder-badge-today { color: #633806; background: #faeeda; }
 .folder-badge-short { color: #0c447c; background: #e6f1fb; }
 .folder-badge-review { color: #3c3489; background: #eeedfe; }
-.folder-badge-reviewed,
 .folder-badge-generic { color: #444441; background: #f1efe8; }
 
 .empty-state {

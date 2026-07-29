@@ -9,20 +9,16 @@ function sortKey(name: string): string {
     return "01";
   }
 
-  if (name === "_short-term") {
+  if (name === "__tomorrow") {
     return "02";
   }
 
+  if (name === "_short-term") {
+    return "03";
+  }
+
   if (name.startsWith("review-")) {
-    return `03_${name.toLowerCase()}`;
-  }
-
-  if (name === "reviewed") {
     return `04_${name.toLowerCase()}`;
-  }
-
-  if (name === "tomorrow") {
-    return "05_tomorrow";
   }
 
   return `10_${name.toLowerCase()}`;
