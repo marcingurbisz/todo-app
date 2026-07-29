@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { marked } from "marked";
 import { commitRepositoryChanges, loadRepository, readFileContent } from "./lib/github";
-import { filterFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
+import { buildFileTree, filterFileTree, getAncestorPaths, getParentDirectory, normalizePath } from "./lib/tree";
 import type { CommitChange, FileTreeNode, RepoSettings, RepoSnapshot } from "./types";
 
 const SETTINGS_STORAGE_KEY = "todo-app.settings";
@@ -191,6 +191,39 @@ function assertTouchedFilesAreCurrent(
       throw new Error(`${path} changed in the remote repository. The latest tree has been loaded; reopen the file and try again.`);
     }
   }
+}
+
+function applyOptimisticChanges(snapshot: RepoSnapshot, changes: CommitChange[]): RepoSnapshot {
+  const files = [...snapshot.files];
+
+  for (const change of changes) {
+    const existingIndex = files.findIndex((entry) => repositoryPathsEqual(entry.path, change.path));
+
+    if (change.delete) {
+      if (existingIndex !== -1) {
+        files.splice(existingIndex, 1);
+      }
+      continue;
+    }
+
+    const nextEntry = {
+      path: normalizePath(change.path),
+      mode: existingIndex === -1 ? "100644" : files[existingIndex].mode,
+      sha: existingIndex === -1 ? `optimistic:${change.path}` : files[existingIndex].sha,
+    };
+
+    if (existingIndex === -1) {
+      files.push(nextEntry);
+    } else {
+      files[existingIndex] = nextEntry;
+    }
+  }
+
+  return {
+    ...snapshot,
+    files,
+    tree: buildFileTree(files),
+  };
 }
 
 interface TreeItemProps {
@@ -465,12 +498,18 @@ export function App() {
     }
 
     publishInFlight.current = true;
+    const baselineSnapshot = snapshot;
+    setSnapshot(applyOptimisticChanges(baselineSnapshot, changes));
+    setExpandedPaths((current) =>
+      changes
+        .filter((change) => !change.delete)
+        .reduce((expanded, change) => mergeExpanded(expanded, change.path), current),
+    );
     setIsBusy(true);
     setError("");
     setStatus(`Publishing: ${message}`);
 
     try {
-      const baselineSnapshot = snapshot;
       let publishedSha = "";
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -507,6 +546,7 @@ export function App() {
       setToast(`${message} · published`);
       return true;
     } catch (nextError) {
+      setSnapshot(baselineSnapshot);
       setError(errorMessage(nextError));
       setStatus("Publish failed.");
       return false;
@@ -562,6 +602,8 @@ export function App() {
       return;
     }
 
+    setShowCreateDialog(false);
+    setActivePane("files");
     const published = await publishChanges(
       `Create ${normalizedPath}`,
       [{ path: normalizedPath, content: createFileContent }],
@@ -569,13 +611,12 @@ export function App() {
     );
 
     if (!published) {
+      setShowCreateDialog(true);
       return;
     }
 
     setCreateFileName("");
     setCreateFileContent("");
-    setShowCreateDialog(false);
-    setActivePane("files");
   }
 
   async function handleSaveFile() {
@@ -594,18 +635,22 @@ export function App() {
 
     const fileName = selectedPath.split("/").at(-1) ?? selectedPath;
     const nextPath = normalizePath(`${destination}/${fileName}`);
+    setActionSheet(null);
+    setActivePane("files");
+    setSelectedPath("");
     const moved = await publishChanges(
       `Move ${selectedPath} to ${nextPath}`,
       [
         { path: selectedPath, delete: true },
         { path: nextPath, content: fileContent },
       ],
-      nextPath,
+      null,
     );
 
-    if (moved) {
-      setActionSheet(null);
-      setActivePane("files");
+    if (!moved) {
+      setSelectedPath(selectedPath);
+      setActivePane("editor");
+      setActionSheet({ type: "move", path: selectedPath });
     }
   }
 
@@ -673,6 +718,8 @@ export function App() {
     }
 
     setIsBusy(false);
+    setActionSheet(null);
+    setIsSelecting(false);
     const changes = plannedMoves.flatMap(({ file, nextPath }, index) => [
       { path: file.path, delete: true as const },
       { path: nextPath, content: contents[index] },
@@ -684,9 +731,9 @@ export function App() {
     );
 
     if (moved) {
-      setActionSheet(null);
-      setIsSelecting(false);
       setSelectedFiles([]);
+    } else {
+      setIsSelecting(true);
     }
   }
 
@@ -738,13 +785,16 @@ export function App() {
         ];
       });
       setIsBusy(false);
+      setActionSheet(null);
       const moved = await publishChanges(
         `Move ${entries.length} files from ${directoryPath} to ${parent}`,
         changes,
         null,
       );
       if (moved) {
-        setActionSheet(null);
+        setSelectedPath("");
+      } else {
+        setActionSheet({ type: "directory", path: directoryPath });
       }
     } catch (nextError) {
       setError(errorMessage(nextError));
@@ -758,9 +808,13 @@ export function App() {
       return;
     }
 
-    await publishChanges(`Delete ${selectedPath}`, [{ path: selectedPath, delete: true }], null);
     setDeletePath("");
     setActivePane("files");
+    const deleted = await publishChanges(`Delete ${selectedPath}`, [{ path: selectedPath, delete: true }], null);
+    if (!deleted) {
+      setActivePane("editor");
+      setDeletePath(selectedPath);
+    }
   }
 
   function updateDraftSetting(field: keyof RepoSettings, value: string) {

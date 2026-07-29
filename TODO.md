@@ -44,7 +44,7 @@ What do you think about that?
 > Changes: The `synced` chip is now an accessible `Pull latest repository state` button. It becomes disabled during work and distinguishes `syncing…` from `publishing…`. Removed the action from settings while retaining its last-sync timestamp and file count.
 > Validation: `npm test` and `npm run build` passed. The real browser E2E clicked the main-screen chip, observed `syncing…`, waited for `synced`, and then completed the repository workflow successfully.
 
-## [NEW] Better UX when doing commit/publishing
+## [DONE 2026-07-29.1] Better UX when doing commit/publishing
 
 Previously we did that:
 * when status publishing is blinking other opeartions that change the status should be disabled in some way. Maybe gray?
@@ -54,3 +54,7 @@ Since publishing takes few seconds what about closing create popup imediatelly a
 When publishing is active other actions that changes repo are blocked.
 Same for other operation.
 What do you think about this idea? Do you have other better idea to make UX better?
+
+> Agent: This is a good mobile UX. Implemented it with one additional safeguard: optimistic changes are rolled back if publishing fails, and the relevant dialog or selection state is restored so the operation can be retried. If the commit succeeds but only the final refresh fails, the optimistic result remains visible because it already represents repository state, and the app asks for a pull.
+> Changes: Create, single move, multi-move, move-up, and delete now close their dialogs/sheets immediately and optimistically rebuild the visible tree. Newly created and moved files appear at once, deleted files disappear at once, and destination directories expand automatically. The blinking `publishing…` chip is the pending indicator; all conflicting repository actions remain disabled until completion. A successful publish still reloads the authoritative repository snapshot.
+> Validation: `npm test` passed 11 tests and `npm run build` passed. The live browser E2E used a real temporary GitHub branch and asserted the immediate dialog closure, disabled conflicting actions, `publishing…` state, optimistic create/delete/multi-move tree updates, and final refreshed results; it passed in 1.2 minutes. `npm run android:build` passed on JDK 25 with Gradle 9.1 and produced the 4,261,728-byte debug APK at `android/app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `8ac8a66103addbe38cb3aa2116610592ee4045f46b738825df08fd904264a897`).

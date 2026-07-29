@@ -162,6 +162,9 @@ test.describe("live browser flow", () => {
     await page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true }).click();
     await page.getByRole("button", { name: "Delete" }).click();
     await page.getByLabel("Delete file dialog").getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByLabel("Delete file dialog")).toHaveCount(0);
+    await expect(pullLatest).toHaveText("publishing…");
+    await expect(page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true })).toHaveCount(0);
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
 
     await page.getByRole("button", { name: "Create file" }).click();
@@ -171,6 +174,11 @@ test.describe("live browser flow", () => {
     await createDialog.getByLabel("File name", { exact: true }).fill(initialFileName);
     await createDialog.getByRole("button", { name: "Create with commit" }).click();
 
+    await expect(createDialog).toHaveCount(0);
+    await expect(pullLatest).toHaveText("publishing…");
+    await expect(pullLatest).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Create file" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true })).toBeVisible();
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
     await page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true }).click();
@@ -198,6 +206,11 @@ test.describe("live browser flow", () => {
     await expect(page.getByRole("heading", { name: "2 selected" })).toBeVisible();
     await page.getByRole("button", { name: "Move", exact: true }).click();
     await page.getByLabel("Move selected files").getByRole("button", { name: "_short-term/", exact: true }).click();
+    await expect(page.getByLabel("Move selected files")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Select files" })).toBeVisible();
+    await expect(pullLatest).toHaveText("publishing…");
+    await expect(page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: secondFileName.replace(/\.md$/, ""), exact: true })).toBeVisible();
     await expect(page.getByText("Published successfully.", { exact: false })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("button", { name: secondFileName.replace(/\.md$/, ""), exact: true })).toBeVisible();
     await page.getByRole("button", { name: initialFileName.replace(/\.md$/, ""), exact: true }).click();
