@@ -37,8 +37,12 @@ Please check if we need so update in the app. For sure we should update document
 > Whole item validation: `npm test`, `npm run build`, the deterministic screenshot test, and the real browser E2E all passed.
 
 
-## [NEW] Maybe move pull now from settings screen somewhare to main screen?
+## [DONE 2026-07-29.1] Maybe move pull now from settings screen somewhare to main screen?
 What do you think about that?
+
+> Agent: Yes. Pull is a tree/repository action used during normal work, so hiding it in configuration added unnecessary navigation. Reused the existing status chip instead of adding another crowded app-bar icon.
+> Changes: The `synced` chip is now an accessible `Pull latest repository state` button. It becomes disabled during work and distinguishes `syncing…` from `publishing…`. Removed the action from settings while retaining its last-sync timestamp and file count.
+> Validation: `npm test` and `npm run build` passed. The real browser E2E clicked the main-screen chip, observed `syncing…`, waited for `synced`, and then completed the repository workflow successfully.
 
 ## [NEW] Better UX when doing commit/publishing
 

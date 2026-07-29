@@ -318,6 +318,9 @@ export function App() {
     () => (searchQuery.trim() ? listDirectoryPaths(filteredTree) : expandedPaths),
     [expandedPaths, filteredTree, searchQuery],
   );
+  const syncChipLabel = isBusy
+    ? status.startsWith("Publishing") ? "publishing…" : "syncing…"
+    : "synced";
 
   useEffect(() => {
     if (!hasConfiguredSettings(initialSettings)) {
@@ -830,7 +833,7 @@ export function App() {
               <>
                 <h1 className="appbar-title"><Icon name="sync" /><span>todo</span></h1>
                 <div className="appbar-actions">
-                  <span className={`sync-chip${isBusy ? " syncing" : ""}`}><span className="sync-dot" />{isBusy ? "publishing…" : "synced"}</span>
+                  <button aria-label="Pull latest repository state" className={`sync-chip${isBusy ? " syncing" : ""}`} disabled={isBusy || !isConfigured} type="button" onClick={() => void syncRepository()}><span className="sync-dot" />{syncChipLabel}</button>
                   <button aria-label="Select files" className="selection-start-button" disabled={isBusy || !snapshot} type="button" onClick={() => setIsSelecting(true)}>Select</button>
                   <button aria-label="Search" className="icon-button" disabled={isBusy} type="button" onClick={() => setShowSearch((current) => !current)}><Icon name="search" /></button>
                   <button aria-label="Settings" className="icon-button" disabled={isBusy} type="button" onClick={openSettings}><Icon name="gear" /></button>
@@ -854,13 +857,7 @@ export function App() {
                 <label className="setting-group"><span className="setting-label">Branch</span><input className="setting-input" value={settingsDraft.branch} onChange={(event) => updateDraftSetting("branch", event.target.value)} placeholder="main" type="text" /></label>
                 <label className="setting-group"><span className="setting-label">GitHub token</span><input className="setting-input" value={settingsDraft.token} onChange={(event) => updateDraftSetting("token", event.target.value)} placeholder="Fine-grained token" type="password" /></label>
                 <p className="setting-hint">Fine-grained PAT with contents read/write access to this repository only.</p>
-                <div className="setting-group">
-                  <span className="setting-label">Sync</span>
-                  <div className="settings-inline-actions">
-                    <button className="action-button" disabled={isBusy || isFirstRun} type="button" onClick={() => void syncRepository()}>Pull now</button>
-                  </div>
-                  <p className="setting-hint">Last pull: {lastSyncAt ?? "not synced in this session"}{snapshot ? ` · ${snapshot.files.length} files` : ""}</p>
-                </div>
+                {!isFirstRun ? <p className="setting-hint settings-sync-hint">Last sync: {lastSyncAt ?? "not synced in this session"}{snapshot ? ` · ${snapshot.files.length} files` : ""}</p> : null}
               </div>
               <div className="action-bar">
                 {!isFirstRun ? <button className="action-button" type="button" onClick={closeSettings}>Cancel</button> : null}

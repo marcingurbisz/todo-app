@@ -148,6 +148,10 @@ test.describe("live browser flow", () => {
 
     await expect(page.getByText("Loaded", { exact: false })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: /files/i })).toBeVisible();
+    const pullLatest = page.getByRole("button", { name: "Pull latest repository state" });
+    await pullLatest.click();
+    await expect(pullLatest).toHaveText("syncing…");
+    await expect(pullLatest).toHaveText("synced", { timeout: 60_000 });
     await expect(page.getByRole("button", { name: trailingSpaceFileName.trim(), exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "__today", exact: true }).click();
 
