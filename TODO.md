@@ -14,6 +14,10 @@ Prefer that all 3 contains current content of `Representative repository shape` 
 
 ## [NEW] Preview mode show content in the middle of the screen instead aligned to the top
 
+## Add screenshot with settings screen
+Maybe all screenshot mogę next to representative repo shape?
+Use black theme in screenshots.
+
 ## [DONE 2026-07-29.1] Changes in the todo repo structure
 
 I have removed `reviewed` subdirectories from my todo repo. Also `__today/tomorrow` has been moved to `__tomorrow`
