@@ -17,12 +17,14 @@ todo/
   __now/
     todo-app.md
   __today/
+    _review-today-tomorrow-and-short-term
     flowlite.md
     mails.md
     publishing.md
   __tomorrow/
     settle-the-tax
   _short-term/
+    _review-every-weekend
     ief.md
     how-to-live-well.md
   review-every-weekend/
