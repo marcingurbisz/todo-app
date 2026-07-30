@@ -10,6 +10,7 @@
     "android:build": "node ./tools/build-android.mjs",
     "android:install": "node ./tools/build-android.mjs --install",
     "android:open": "npx cap open android",
+    "playwright:install": "playwright install --with-deps chromium",
     "preview": "vite preview",
     "test": "vitest run",
     "test:live": "node ./tools/run-all-live-tests.mjs",

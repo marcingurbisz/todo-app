@@ -146,7 +146,7 @@ npm test
 Opt-in scripted tests against the real `todo-app-test` repository:
 
 ```bash
-npx playwright install --with-deps chromium # once per environment for UI tests
+npm run playwright:install # after a clean container build or Playwright update
 npm run test:live
 npm run test:live:api
 npm run test:live:ui
