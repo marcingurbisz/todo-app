@@ -25,7 +25,6 @@ todo/
   _short-term/
     ief.md
     how-to-live-well.md
-    always-on-agent-with-access-to-repo.md
   review-every-weekend/
     kuba-badania.md
     health.md

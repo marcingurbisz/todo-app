@@ -10,3 +10,4 @@ vite.config.js
 vite.config.d.ts
 TODO copy.md
 secrets.md
+.idea/
